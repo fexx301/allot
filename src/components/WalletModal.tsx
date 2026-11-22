@@ -110,64 +110,72 @@ export function WalletModal({
           </button>
         </div>
 
-        <div className="mt-4 rounded-xl border border-[#E5E4DE] bg-[#F7F6F2] p-3">
+        <div className="mt-4 rounded-xl border border-[#E5E1D8] bg-[#FAF8F4] p-3">
           <div className="flex items-center justify-between text-xs">
-            <span className="font-medium text-stone-600">Browser P-256 Signer Public Key</span>
-            <span className="font-mono text-emerald-700">{vault?.fingerprint ?? "Initializing…"}</span>
+            <span className="font-medium text-[#625B54]">Browser P-256 Signer Public Key</span>
+            <span className="font-mono text-[#701735]">{vault?.fingerprint ?? "Initializing…"}</span>
           </div>
-          <p className="mt-1 break-all font-mono text-[11px] text-stone-500">
+          <p className="mt-1 break-all font-mono text-[11px] text-[#625B54]">
             {vault?.publicKeyCompressedHex}
           </p>
         </div>
 
         {connectedWallet ? (
           <div className="mt-4 space-y-3">
-            <div className="rounded-xl border border-emerald-200 bg-emerald-50/50 p-3.5 text-xs">
+            <div className="rounded-xl border border-[#EAD2DA] bg-[#F9EFF2] p-3.5 text-xs">
               <div className="flex items-center justify-between">
-                <span className="font-semibold text-emerald-900">
+                <span className="font-semibold text-[#701735]">
                   Active Gateway User: {connectedWallet.displayName}
                 </span>
-                <span className="font-mono text-[11px] text-emerald-700">
+                <span className="font-mono text-[11px] text-[#701735]">
                   /pay/{connectedWallet.handle}
                 </span>
               </div>
-              <div className="mt-2 font-mono text-[11px] text-stone-600">
+              <div className="mt-2 font-mono text-[11px] text-[#625B54]">
                 user_id: {connectedWallet.userId}
               </div>
             </div>
 
             <div className="space-y-2">
-              <div className="flex items-center justify-between rounded-xl border border-[#E5E4DE] p-3">
+              <div className="flex items-center justify-between rounded-xl border border-[#E5E1D8] p-3">
                 <div className="min-w-0">
-                  <div className="text-[11px] font-medium uppercase tracking-wider text-stone-500">
+                  <div className="text-[11px] font-medium uppercase tracking-wider text-[#625B54]">
                     Base / EVM USDC Address
                   </div>
-                  <div className="truncate font-mono text-xs text-slate-900">
+                  <div className="truncate font-mono text-xs text-[#171412]">
                     {connectedWallet.evmAddress}
                   </div>
                 </div>
                 <button
                   onClick={() => copy(connectedWallet.evmAddress, "evm")}
-                  className="ml-2 shrink-0 rounded-lg border border-[#E5E4DE] px-2.5 py-1.5 text-xs font-medium text-stone-700 hover:bg-stone-50"
+                  className="ml-2 shrink-0 rounded-lg border border-[#E5E1D8] px-2.5 py-1.5 text-xs font-medium text-[#171412] hover:bg-[#FAF8F4]"
                 >
-                  {copied === "evm" ? <Check className="h-3.5 w-3.5 text-emerald-600" /> : <Copy className="h-3.5 w-3.5" />}
+                  {copied === "evm" ? (
+                    <Check className="h-3.5 w-3.5 text-teal-700" />
+                  ) : (
+                    <Copy className="h-3.5 w-3.5" />
+                  )}
                 </button>
               </div>
 
-              <div className="flex items-center justify-between rounded-xl border border-[#E5E4DE] p-3">
+              <div className="flex items-center justify-between rounded-xl border border-[#E5E1D8] p-3">
                 <div className="min-w-0">
-                  <div className="text-[11px] font-medium uppercase tracking-wider text-stone-500">
+                  <div className="text-[11px] font-medium uppercase tracking-wider text-[#625B54]">
                     Solana USDC Address
                   </div>
-                  <div className="truncate font-mono text-xs text-slate-900">
+                  <div className="truncate font-mono text-xs text-[#171412]">
                     {connectedWallet.solanaAddress}
                   </div>
                 </div>
                 <button
                   onClick={() => copy(connectedWallet.solanaAddress, "sol")}
-                  className="ml-2 shrink-0 rounded-lg border border-[#E5E4DE] px-2.5 py-1.5 text-xs font-medium text-stone-700 hover:bg-stone-50"
+                  className="ml-2 shrink-0 rounded-lg border border-[#E5E1D8] px-2.5 py-1.5 text-xs font-medium text-[#171412] hover:bg-[#FAF8F4]"
                 >
-                  {copied === "sol" ? <Check className="h-3.5 w-3.5 text-emerald-600" /> : <Copy className="h-3.5 w-3.5" />}
+                  {copied === "sol" ? (
+                    <Check className="h-3.5 w-3.5 text-teal-700" />
+                  ) : (
+                    <Copy className="h-3.5 w-3.5" />
+                  )}
                 </button>
               </div>
             </div>
@@ -175,7 +183,7 @@ export function WalletModal({
             <div className="flex justify-end gap-2 pt-2">
               <button
                 onClick={onClose}
-                className="rounded-xl bg-slate-900 px-4 py-2 text-sm font-medium text-white hover:bg-slate-800"
+                className="rounded-full bg-[#701735] px-5 py-2 text-sm font-medium text-white hover:bg-[#581028]"
               >
                 Done
               </button>

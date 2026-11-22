@@ -58,3 +58,54 @@ body {
   background-size: 200% 100%;
   animation: shimmer 1.4s ease-in-out infinite;
 }
+
+/* Bespoke fintech range sliders */
+.allot-slider {
+  -webkit-appearance: none;
+  appearance: none;
+  height: 6px;
+  border-radius: 9999px;
+  background: #e5e1d8;
+  outline: none;
+}
+
+.allot-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 18px;
+  height: 18px;
+  border-radius: 9999px;
+  background: #701735;
+  border: 2.5px solid #ffffff;
+  box-shadow: 0 1px 4px rgba(112, 23, 53, 0.35);
+  cursor: pointer;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.allot-slider::-webkit-slider-thumb:hover {
+  transform: scale(1.12);
+  box-shadow: 0 0 0 4px rgba(112, 23, 53, 0.14);
+}
+
+.allot-slider::-moz-range-thumb {
+  width: 18px;
+  height: 18px;
+  border-radius: 9999px;
+  background: #701735;
+  border: 2.5px solid #ffffff;
+  box-shadow: 0 1px 4px rgba(112, 23, 53, 0.35);
+  cursor: pointer;
+}
+
+.allot-slider-amber::-webkit-slider-thumb {
+  background: #b45309;
+  box-shadow: 0 1px 4px rgba(180, 83, 9, 0.35);
+}
+
+.allot-slider-amber::-webkit-slider-thumb:hover {
+  box-shadow: 0 0 0 4px rgba(180, 83, 9, 0.16);
+}
+
+.allot-slider-amber::-moz-range-thumb {
+  background: #b45309;
+}

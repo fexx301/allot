@@ -454,7 +454,7 @@ export default function OrdersAndWalletPage() {
       )}
 
       {statusMsg && (
-        <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-xs text-emerald-900">
+        <div className="rounded-2xl border border-[#EAD2DA] bg-[#F9EFF2] px-4 py-3 text-xs text-[#701735]">
           {statusMsg}
         </div>
       )}
@@ -462,30 +462,37 @@ export default function OrdersAndWalletPage() {
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-12">
         {/* Balances & Orders */}
         <div className="space-y-6 lg:col-span-7">
-          <div className="rounded-2xl border border-[#E5E4DE] bg-white p-5 shadow-xs">
+          <div className="rounded-2xl border border-[#E5E1D8] bg-white p-5 shadow-xs">
             <div className="flex items-center justify-between">
-              <h2 className="text-sm font-semibold uppercase tracking-wider text-stone-500">
+              <h2 className="font-serif-display text-lg font-semibold text-[#171412]">
                 Live Gateway Balances
               </h2>
-              <span className="font-mono text-xs text-stone-500">
+              <span className="font-mono text-xs text-[#625B54]">
                 user: {data?.userId.slice(0, 12) ?? "…"}…
               </span>
             </div>
 
             {loading ? (
-              <div className="py-8 text-center text-xs text-stone-500">Loading live balances…</div>
+              <div className="mt-4 space-y-2.5">
+                <div className="skeleton h-14 rounded-xl" />
+                <div className="skeleton h-14 rounded-xl" />
+              </div>
             ) : !data?.balances.length ? (
-              <div className="mt-4 rounded-xl border border-dashed border-[#E5E4DE] bg-[#F7F6F2] p-5 text-center text-xs text-stone-600">
+              <div className="mt-4 rounded-2xl border border-dashed border-[#D8D1C5] bg-[#FAF8F4] p-5 text-center text-xs text-[#625B54]">
                 Wallet currently holds $0.00. Send a few USDC on Base or Solana to your Paylink
                 deposit address to run live fills and test instant Cash Floor withdrawals.
               </div>
             ) : (
-              <div className="mt-4 divide-y divide-[#E5E4DE]">
+              <div className="mt-4 divide-y divide-[#E5E1D8]">
                 {data.balances.map((b, i) => {
                   const pItem = data.portfolio?.balances?.find(
                     (pb) => pb.asset_id === b.asset_id || pb.symbol === b.symbol,
                   );
-                  const liveValue = pItem?.value ? Number(pItem.value) : b.usd_value ? Number(b.usd_value) : null;
+                  const liveValue = pItem?.value
+                    ? Number(pItem.value)
+                    : b.usd_value
+                      ? Number(b.usd_value)
+                      : null;
                   const entryPrice = pItem?.cost_basis?.avg_entry_price
                     ? Number(pItem.cost_basis.avg_entry_price)
                     : null;
@@ -495,58 +502,73 @@ export default function OrdersAndWalletPage() {
                     : null;
 
                   return (
-                    <div key={`${b.symbol}-${b.chain}-${i}`} className="flex items-center justify-between gap-3 py-3.5">
+                    <div
+                      key={`${b.symbol}-${b.chain}-${i}`}
+                      className="flex items-center justify-between gap-3 py-3.5"
+                    >
                       <div className="flex items-center gap-3">
                         {pItem?.icon ? (
                           // eslint-disable-next-line @next/next/no-img-element
                           <img
                             src={pItem.icon}
                             alt={b.symbol}
-                            className="h-8 w-8 rounded-full border border-[#E5E4DE] bg-white object-cover"
+                            className="h-9 w-9 rounded-full border border-[#E5E1D8] bg-white object-cover"
                           />
                         ) : (
-                          <div className="flex h-8 w-8 items-center justify-center rounded-full bg-slate-900 font-mono text-xs font-bold text-white">
+                          <div className="flex h-9 w-9 items-center justify-center rounded-full bg-[#701735] font-mono text-xs font-bold text-white">
                             {b.symbol.slice(0, 2)}
                           </div>
                         )}
                         <div>
                           <div className="flex items-center gap-1.5">
-                            <span className="font-mono text-sm font-semibold text-slate-900">{b.symbol}</span>
-                            {pItem?.name && <span className="text-xs text-stone-500">{pItem.name}</span>}
-                            <span className="rounded bg-[#F7F6F2] px-1.5 py-0.5 font-mono text-[10px] text-stone-600">
+                            <span className="font-mono text-sm font-semibold text-[#171412]">
+                              {b.symbol}
+                            </span>
+                            {pItem?.name && (
+                              <span className="text-xs text-[#625B54]">{pItem.name}</span>
+                            )}
+                            <span className="rounded-full bg-[#FAF8F4] px-2 py-0.5 font-mono text-[10px] text-[#625B54] ring-1 ring-[#E5E1D8]">
                               {b.chain || b.venue || "cefi"}
                             </span>
                           </div>
-                          <div className="mt-0.5 font-mono text-[11px] text-stone-500 tabular-nums">
+                          <div className="mt-0.5 font-mono text-[11px] text-[#625B54] tabular-nums">
                             {b.available} {b.symbol}
-                            {livePrice && b.symbol !== "USDC" ? ` · Live $${livePrice.toFixed(2)}` : ""}
-                            {entryPrice ? ` · Avg Entry $${entryPrice.toFixed(2)}` : ""}
+                            {livePrice && b.symbol !== "USDC"
+                              ? ` · Live $${livePrice.toFixed(2)}`
+                              : ""}
+                            {entryPrice ? ` · Avg $${entryPrice.toFixed(2)}` : ""}
                           </div>
                         </div>
                       </div>
                       <div className="flex items-center gap-3 text-right font-mono tabular-nums">
                         <div>
-                          <div className="text-sm font-semibold text-slate-900">
+                          <div className="text-sm font-semibold text-[#171412]">
                             {liveValue !== null ? `$${liveValue.toFixed(2)}` : b.available}
                           </div>
                           {pnl !== null && b.symbol !== "USDC" && (
                             <div
-                              className={`text-[11px] ${pnl >= 0 ? "text-emerald-700" : "text-stone-500"}`}
+                              className={`text-[11px] ${pnl >= 0 ? "text-teal-700" : "text-[#625B54]"}`}
                             >
                               {pnl >= 0 ? "+" : ""}${pnl.toFixed(3)} P&amp;L
                             </div>
                           )}
                         </div>
-                        {b.symbol.toUpperCase() !== "USDC" && b.asset_id && Number(b.available) > 0 && (
-                          <button
-                            onClick={() => handleQuickSellToUsdc(b)}
-                            disabled={submitting || !wallet}
-                            title={!wallet ? "Showcase wallet is read-only (signer key offline)" : undefined}
-                            className="rounded-lg border border-[#E5E4DE] bg-[#F7F6F2] px-2.5 py-1.5 font-sans text-xs font-medium text-slate-800 hover:bg-stone-200/70 disabled:opacity-40"
-                          >
-                            {wallet ? "Sell to USDC" : "Locked (Demo)"}
-                          </button>
-                        )}
+                        {b.symbol.toUpperCase() !== "USDC" &&
+                          b.asset_id &&
+                          Number(b.available) > 0 && (
+                            <button
+                              onClick={() => handleQuickSellToUsdc(b)}
+                              disabled={submitting || !wallet}
+                              title={
+                                !wallet
+                                  ? "Showcase wallet is read-only (signer key offline)"
+                                  : undefined
+                              }
+                              className="rounded-full border border-[#E5E1D8] bg-[#FAF8F4] px-3 py-1.5 font-sans text-xs font-medium text-[#171412] transition hover:border-[#701735]/40 disabled:opacity-45"
+                            >
+                              {wallet ? "Sell to USDC" : "Locked (Demo)"}
+                            </button>
+                          )}
                       </div>
                     </div>
                   );
@@ -555,13 +577,13 @@ export default function OrdersAndWalletPage() {
             )}
           </div>
 
-          <div className="rounded-2xl border border-[#E5E4DE] bg-white p-5 shadow-xs">
-            <h2 className="text-sm font-semibold uppercase tracking-wider text-stone-500">
-              Gateway Orders (Market &amp; Resting CeFi CLOB Limit)
+          <div className="rounded-2xl border border-[#E5E1D8] bg-white p-5 shadow-xs">
+            <h2 className="font-serif-display text-lg font-semibold text-[#171412]">
+              Executed &amp; Resting CLOB Orders
             </h2>
 
             {!data?.orders.length ? (
-              <div className="mt-4 rounded-xl border border-dashed border-[#E5E4DE] bg-[#F7F6F2] p-5 text-center text-xs text-stone-600">
+              <div className="mt-4 rounded-2xl border border-dashed border-[#D8D1C5] bg-[#FAF8F4] p-5 text-center text-xs text-[#625B54]">
                 No executed or resting orders yet for this Gateway user.
               </div>
             ) : (
@@ -571,19 +593,21 @@ export default function OrdersAndWalletPage() {
                   return (
                     <div
                       key={id}
-                      className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-[#E5E4DE] bg-[#F7F6F2]/50 p-3.5 text-xs"
+                      className="flex flex-wrap items-center justify-between gap-2 rounded-2xl border border-[#E5E1D8] bg-[#FAF8F4]/70 p-4 text-xs"
                     >
                       <div>
                         <div className="flex items-center gap-2 font-mono">
-                          <span className="font-semibold text-slate-900">
+                          <span className="font-semibold text-[#171412]">
                             {o.asset_symbol || o.symbol || o.asset_id?.slice(0, 8)}
                           </span>
-                          <span className="uppercase text-stone-600">{o.type} {o.side}</span>
-                          <span className="rounded bg-white px-1.5 py-0.5 text-[10px] font-semibold ring-1 ring-[#E5E4DE]">
+                          <span className="uppercase text-[#625B54]">
+                            {o.type} {o.side}
+                          </span>
+                          <span className="rounded-full bg-[#F9EFF2] px-2 py-0.5 text-[10px] font-semibold text-[#701735]">
                             {o.status}
                           </span>
                         </div>
-                        <div className="mt-1 flex flex-wrap items-center gap-2 font-mono text-[11px] text-stone-500">
+                        <div className="mt-1 flex flex-wrap items-center gap-2 font-mono text-[11px] text-[#625B54]">
                           <span>
                             {o.executed_qty || o.qty} sh
                             {o.executed_vwap
@@ -598,7 +622,7 @@ export default function OrdersAndWalletPage() {
                               href={o.explorer_url}
                               target="_blank"
                               rel="noreferrer"
-                              className="font-medium text-emerald-700 underline hover:text-emerald-900"
+                              className="font-semibold text-[#701735] underline hover:text-[#581028]"
                             >
                               BaseScan ↗
                             </a>
@@ -614,19 +638,19 @@ export default function OrdersAndWalletPage() {
                             onChange={(e) =>
                               setEditPriceMap((prev) => ({ ...prev, [id]: e.target.value }))
                             }
-                            className="w-20 rounded-lg border border-[#E5E4DE] bg-white px-2 py-1 font-mono text-xs text-slate-900 outline-none focus:border-slate-900"
+                            className="w-20 rounded-xl border border-[#E5E1D8] bg-white px-2.5 py-1 font-mono text-xs text-[#171412] outline-none focus:border-[#701735]"
                           />
                           <button
                             onClick={() => handleModifyOrder(id)}
                             disabled={submitting || !editPriceMap[id]}
-                            className="rounded-lg border border-[#E5E4DE] bg-white px-2.5 py-1.5 text-xs font-medium text-slate-800 hover:bg-stone-100 disabled:opacity-40"
+                            className="rounded-full border border-[#E5E1D8] bg-white px-3 py-1.5 text-xs font-medium text-[#171412] hover:border-[#701735]/40 disabled:opacity-40"
                           >
                             PATCH Price
                           </button>
                           <button
                             onClick={() => handleCancelOrder(id)}
                             disabled={submitting}
-                            className="inline-flex items-center gap-1 rounded-lg border border-red-200 bg-white px-2.5 py-1.5 text-xs font-medium text-red-700 hover:bg-red-50"
+                            className="inline-flex items-center gap-1 rounded-full border border-rose-200 bg-white px-3 py-1.5 text-xs font-medium text-rose-800 hover:bg-rose-50"
                           >
                             <XCircle className="h-3.5 w-3.5" />
                             Sign &amp; Cancel
@@ -643,22 +667,21 @@ export default function OrdersAndWalletPage() {
 
         {/* Instant Cash Floor Withdrawal */}
         <div className="lg:col-span-5">
-          <div className="rounded-2xl border border-[#E5E4DE] bg-white p-5 shadow-xs">
+          <div className="rounded-2xl border border-[#E5E1D8] bg-white p-5 shadow-xs">
             <div className="flex items-center gap-2">
-              <Send className="h-4 w-4 text-emerald-700" />
-              <h2 className="text-sm font-semibold uppercase tracking-wider text-stone-500">
+              <Send className="h-4 w-4 text-[#701735]" />
+              <h2 className="font-serif-display text-lg font-semibold text-[#171412]">
                 Withdraw Protected Cash Floor
               </h2>
             </div>
-            <p className="mt-1.5 text-xs text-stone-600">
-              Your protected rent/cash USDC is never locked up. Send tokens out anytime via{" "}
-              <code className="font-mono">POST /v1/gateway/transfers</code> signed locally by your
-              browser P-256 key.
+            <p className="mt-1.5 text-xs leading-relaxed text-[#625B54]">
+              Your protected rent/cash USDC is never locked up. Send tokens out anytime via True
+              Markets Gateway transfers signed locally by your browser P-256 key.
             </p>
 
-            <form onSubmit={handleWithdraw} className="mt-4 space-y-3">
+            <form onSubmit={handleWithdraw} className="mt-4 space-y-3.5">
               <div>
-                <label className="block text-xs font-medium text-stone-700">
+                <label className="block text-xs font-medium text-[#625B54]">
                   Destination Address (same chain)
                 </label>
                 <input
@@ -666,11 +689,11 @@ export default function OrdersAndWalletPage() {
                   onChange={(e) => setWithdrawTo(e.target.value)}
                   placeholder="0x… or Solana address"
                   required
-                  className="mt-1 w-full rounded-xl border border-[#E5E4DE] bg-[#F7F6F2] px-3 py-2 font-mono text-xs text-slate-900 outline-none focus:border-slate-900 focus:bg-white"
+                  className="mt-1 w-full rounded-xl border border-[#E5E1D8] bg-[#FAF8F4] px-3 py-2.5 font-mono text-xs text-[#171412] outline-none focus:border-[#701735] focus:bg-white"
                 />
               </div>
               <div>
-                <label className="block text-xs font-medium text-stone-700">Amount (USDC)</label>
+                <label className="block text-xs font-medium text-[#625B54]">Amount (USDC)</label>
                 <input
                   type="number"
                   step="0.01"
@@ -678,26 +701,25 @@ export default function OrdersAndWalletPage() {
                   value={withdrawAmount}
                   onChange={(e) => setWithdrawAmount(e.target.value)}
                   required
-                  className="mt-1 w-full rounded-xl border border-[#E5E4DE] bg-[#F7F6F2] px-3 py-2 font-mono text-sm font-semibold text-slate-900 outline-none focus:border-slate-900 focus:bg-white"
+                  className="mt-1 w-full rounded-xl border border-[#E5E1D8] bg-[#FAF8F4] px-3 py-2.5 font-mono text-sm font-semibold text-[#171412] outline-none focus:border-[#701735] focus:bg-white"
                 />
               </div>
 
-              <div className="rounded-xl border border-[#E5E4DE] bg-[#F7F6F2] p-3 text-[11px] text-stone-600">
-                <div className="flex items-center gap-1.5 font-medium text-slate-800">
-                  <Shield className="h-3.5 w-3.5 text-emerald-700" />
+              <div className="rounded-2xl border border-[#EAD2DA] bg-[#F9EFF2]/60 p-3.5 text-[11px] text-[#625B54]">
+                <div className="flex items-center gap-1.5 font-semibold text-[#701735]">
+                  <Shield className="h-3.5 w-3.5" />
                   Non-custodial withdrawal guarantee
                 </div>
-                <p className="mt-1">
-                  Even if Allot shuts down, you can always withdraw funds or sell tokenized stocks
-                  back to USDC because only your P-256 key ({vault?.fingerprint ?? "…"}) authorizes
-                  transfers.
+                <p className="mt-1 leading-relaxed">
+                  Only your P-256 signer key ({vault?.fingerprint ?? "…"}) authorizes withdrawals —
+                  Allot&apos;s servers can never move funds without your signature.
                 </p>
               </div>
 
               <button
                 type="submit"
                 disabled={submitting || !withdrawAssetId || !withdrawTo || !wallet}
-                className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-slate-900 px-4 py-2.5 text-sm font-medium text-white transition hover:bg-emerald-800 disabled:opacity-40"
+                className="inline-flex w-full items-center justify-center gap-2 rounded-full bg-[#701735] px-5 py-2.5 text-sm font-medium text-white transition hover:bg-[#581028] disabled:opacity-45"
               >
                 {submitting && <Loader2 className="h-4 w-4 animate-spin" />}
                 {wallet ? "Sign with P-256 & Send USDC" : "Read-Only Showcase Wallet (Signer Offline)"}

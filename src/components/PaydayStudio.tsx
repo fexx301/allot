@@ -430,6 +430,36 @@ export function PaydayStudio() {
     setLegs((prev) => prev.filter((l) => l.economicAssetId !== economicAssetId));
   }
 
+  function normalizeWeightsTo100() {
+    setLegs((prev) => {
+      if (prev.length === 0) return prev;
+      const sum = prev.reduce((acc, l) => acc + l.weightPct, 0);
+      if (sum <= 0) {
+        const base = Math.floor(100 / prev.length);
+        let rem = 100 - base * prev.length;
+        return prev.map((l) => {
+          const extra = rem > 0 ? 1 : 0;
+          if (rem > 0) rem -= 1;
+          return { ...l, weightPct: base + extra };
+        });
+      }
+      const scaled = prev.map((l) => ({
+        leg: l,
+        raw: (l.weightPct / sum) * 100,
+        floor: Math.floor((l.weightPct / sum) * 100),
+      }));
+      let rem = 100 - scaled.reduce((a, s) => a + s.floor, 0);
+      const order = [...scaled]
+        .map((s, idx) => ({ idx, frac: s.raw - s.floor }))
+        .sort((a, b) => b.frac - a.frac);
+      const bonuses = new Set(order.slice(0, Math.max(0, rem)).map((o) => o.idx));
+      return scaled.map((s, idx) => ({
+        ...s.leg,
+        weightPct: s.floor + (bonuses.has(idx) ? 1 : 0),
+      }));
+    });
+  }
+
   const filteredCatalog = useMemo(() => {
     if (!catalog) return [];
     return catalog.stocks.filter((s) => {
@@ -921,9 +951,9 @@ export function PaydayStudio() {
                 step={50}
                 value={cashFloorUsd}
                 onChange={(e) => setCashFloorUsd(Number(e.target.value))}
-                className="mt-2 w-full accent-[#701735]"
+                className="allot-slider mt-2.5 w-full"
               />
-              <p className="mt-1 text-[11px] text-[#625B54]">
+              <p className="mt-1.5 text-[11px] text-[#625B54]">
                 Rent and bills come first — zero stock buys happen until your cash exceeds this
                 reserve.
               </p>
@@ -944,8 +974,30 @@ export function PaydayStudio() {
                 step={5}
                 value={maxDriftBps}
                 onChange={(e) => setMaxDriftBps(Number(e.target.value))}
-                className="mt-2 w-full accent-amber-700"
+                className="allot-slider allot-slider-amber mt-2.5 w-full"
               />
+              <div className="mt-2.5 flex flex-wrap gap-1.5">
+                {(
+                  [
+                    [5, "Strict 5 bps · Trigger Limit"],
+                    [25, "Balanced 25 bps"],
+                    [60, "Wide 60 bps"],
+                  ] as const
+                ).map(([bps, label]) => (
+                  <button
+                    key={bps}
+                    type="button"
+                    onClick={() => setMaxDriftBps(bps)}
+                    className={`rounded-full px-2.5 py-1 text-[11px] font-medium transition ${
+                      maxDriftBps === bps
+                        ? "bg-amber-700 text-white shadow-xs"
+                        : "border border-[#E5E1D8] bg-[#FAF8F4] text-[#625B54] hover:border-amber-700/40 hover:text-[#171412]"
+                    }`}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
               <label className="mt-2.5 flex cursor-pointer items-center justify-between rounded-xl border border-[#E5E1D8] bg-[#FAF8F4] px-3 py-2.5">
                 <div>
                   <div className="text-xs font-medium text-[#171412]">
@@ -980,13 +1032,24 @@ export function PaydayStudio() {
                       : "Weights exceed 100% — trim a leg"}
                 </p>
               </div>
-              <button
-                onClick={() => setPickerOpen((v) => !v)}
-                className="inline-flex items-center gap-1 rounded-full border border-[#EAD2DA] bg-[#F9EFF2] px-3 py-1.5 text-xs font-medium text-[#701735] transition hover:bg-[#F3DFE6]"
-              >
-                <Plus className="h-3.5 w-3.5" />
-                Add Stock
-              </button>
+              <div className="flex items-center gap-1.5">
+                {totalWeightPct !== 100 && (
+                  <button
+                    type="button"
+                    onClick={normalizeWeightsTo100}
+                    className="rounded-full border border-[#E5E1D8] bg-[#FAF8F4] px-2.5 py-1.5 text-[11px] font-medium text-[#171412] transition hover:border-[#701735]/40 hover:text-[#701735]"
+                  >
+                    Auto-Balance 100%
+                  </button>
+                )}
+                <button
+                  onClick={() => setPickerOpen((v) => !v)}
+                  className="inline-flex items-center gap-1 rounded-full border border-[#EAD2DA] bg-[#F9EFF2] px-3 py-1.5 text-xs font-medium text-[#701735] transition hover:bg-[#F3DFE6]"
+                >
+                  <Plus className="h-3.5 w-3.5" />
+                  Add Stock
+                </button>
+              </div>
             </div>
 
             {pickerOpen && (

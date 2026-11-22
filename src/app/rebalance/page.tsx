@@ -151,15 +151,15 @@ export default function RebalancePage() {
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-12">
         {/* Controls */}
-        <section className="space-y-4 rounded-2xl border border-[#E5E4DE] bg-white p-5 shadow-xs lg:col-span-4">
-          <h2 className="text-sm font-semibold uppercase tracking-wider text-stone-500">
+        <section className="space-y-4 rounded-2xl border border-[#E5E1D8] bg-white p-5 shadow-xs lg:col-span-4">
+          <h2 className="font-serif-display text-lg font-semibold text-[#171412]">
             Rebalance Guardrails
           </h2>
 
           <div>
             <div className="flex justify-between text-xs">
-              <span className="font-medium text-slate-800">No-Churn Drift Band</span>
-              <span className="font-mono font-semibold text-slate-900">±{driftThresholdPct}%</span>
+              <span className="font-medium text-[#171412]">No-Churn Drift Band</span>
+              <span className="font-mono font-semibold text-[#701735]">±{driftThresholdPct}%</span>
             </div>
             <input
               type="range"
@@ -168,13 +168,13 @@ export default function RebalancePage() {
               step={1}
               value={driftThresholdPct}
               onChange={(e) => setDriftThresholdPct(Number(e.target.value))}
-              className="mt-2 w-full accent-slate-900"
+              className="allot-slider mt-2.5 w-full"
             />
           </div>
 
           <div>
             <div className="flex justify-between text-xs">
-              <span className="font-medium text-slate-800">Max Spread Guard</span>
+              <span className="font-medium text-[#171412]">Max Spread Guard</span>
               <span className="font-mono font-semibold text-amber-800">{maxSpreadBps} bps</span>
             </div>
             <input
@@ -184,25 +184,25 @@ export default function RebalancePage() {
               step={5}
               value={maxSpreadBps}
               onChange={(e) => setMaxSpreadBps(Number(e.target.value))}
-              className="mt-2 w-full accent-amber-700"
+              className="allot-slider allot-slider-amber mt-2.5 w-full"
             />
           </div>
 
-          <div className="border-t border-[#E5E4DE] pt-4">
-            <h3 className="text-xs font-semibold uppercase tracking-wider text-stone-500">
+          <div className="border-t border-[#E5E1D8] pt-4">
+            <h3 className="font-mono text-[10px] font-semibold uppercase tracking-wider text-[#625B54]">
               Current Share Balances
             </h3>
             <div className="mt-3 space-y-2">
               {holdings.map((h, idx) => (
                 <div
                   key={h.symbol}
-                  className="flex items-center justify-between rounded-xl border border-[#E5E4DE] bg-[#F7F6F2] px-3 py-2 text-xs"
+                  className="flex items-center justify-between rounded-xl border border-[#E5E1D8] bg-[#FAF8F4] px-3 py-2 text-xs"
                 >
                   <div>
-                    <span className="font-mono font-semibold text-slate-900">{h.symbol}</span>
-                    <span className="ml-1.5 text-stone-500">target {h.targetWeightPct}%</span>
+                    <span className="font-mono font-semibold text-[#171412]">{h.symbol}</span>
+                    <span className="ml-1.5 text-[#625B54]">target {h.targetWeightPct}%</span>
                   </div>
-                  <div className="flex items-center gap-1 rounded-lg border border-[#E5E4DE] bg-white px-2 py-1">
+                  <div className="flex items-center gap-1 rounded-lg border border-[#E5E1D8] bg-white px-2 py-1 focus-within:border-[#701735]">
                     <input
                       type="number"
                       min={0}
@@ -214,9 +214,9 @@ export default function RebalancePage() {
                           prev.map((row, i) => (i === idx ? { ...row, qty: val } : row)),
                         );
                       }}
-                      className="w-14 text-right font-mono font-semibold text-slate-900 outline-none"
+                      className="w-14 text-right font-mono font-semibold text-[#171412] outline-none"
                     />
-                    <span className="text-[10px] text-stone-400">sh</span>
+                    <span className="text-[10px] text-[#625B54]">sh</span>
                   </div>
                 </div>
               ))}
@@ -227,116 +227,134 @@ export default function RebalancePage() {
         {/* Compiled Rebalance Plan */}
         <section className="space-y-4 lg:col-span-8">
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-            <div className="rounded-2xl border border-[#E5E4DE] bg-white p-4 shadow-xs">
-              <div className="text-[11px] uppercase text-stone-500">Equity Value</div>
-              <div className="mt-1 font-mono text-lg font-semibold text-slate-900 tabular-nums">
+            <div className="rounded-2xl border border-[#E5E1D8] bg-white p-4 shadow-xs">
+              <div className="font-mono text-[10px] uppercase tracking-wider text-[#625B54]">
+                Equity Value
+              </div>
+              <div className="font-serif-display mt-1 text-2xl font-semibold text-[#171412] tabular-nums">
                 {plan ? fmtUsd(plan.totalPortfolioCents) : "—"}
               </div>
             </div>
-            <div className="rounded-2xl border border-[#E5E4DE] bg-white p-4 shadow-xs">
-              <div className="text-[11px] uppercase text-stone-500">Trim (Sell First)</div>
-              <div className="mt-1 font-mono text-lg font-semibold text-indigo-900 tabular-nums">
+            <div className="rounded-2xl border border-[#E5E1D8] bg-white p-4 shadow-xs">
+              <div className="font-mono text-[10px] uppercase tracking-wider text-[#625B54]">
+                Trim (Sell First)
+              </div>
+              <div className="font-serif-display mt-1 text-2xl font-semibold text-[#701735] tabular-nums">
                 {plan ? fmtUsd(plan.totalSellCents) : "—"}
               </div>
             </div>
-            <div className="rounded-2xl border border-[#E5E4DE] bg-white p-4 shadow-xs">
-              <div className="text-[11px] uppercase text-stone-500">Top Up (Buy)</div>
-              <div className="mt-1 font-mono text-lg font-semibold text-emerald-800 tabular-nums">
+            <div className="rounded-2xl border border-[#E5E1D8] bg-white p-4 shadow-xs">
+              <div className="font-mono text-[10px] uppercase tracking-wider text-[#625B54]">
+                Top Up (Buy)
+              </div>
+              <div className="font-serif-display mt-1 text-2xl font-semibold text-teal-800 tabular-nums">
                 {plan ? fmtUsd(plan.totalBuyCents) : "—"}
               </div>
             </div>
-            <div className="rounded-2xl border border-[#E5E4DE] bg-white p-4 shadow-xs">
-              <div className="text-[11px] uppercase text-stone-500">Spread Saved</div>
-              <div className="mt-1 font-mono text-lg font-semibold text-amber-800 tabular-nums">
+            <div className="rounded-2xl border border-[#E5E1D8] bg-white p-4 shadow-xs">
+              <div className="font-mono text-[10px] uppercase tracking-wider text-[#625B54]">
+                Spread Saved
+              </div>
+              <div className="font-serif-display mt-1 text-2xl font-semibold text-amber-800 tabular-nums">
                 {plan ? `$${plan.estimatedSavingsUsd.toFixed(2)}` : "—"}
               </div>
             </div>
           </div>
 
           {error && (
-            <div className="rounded-xl border border-red-200 bg-red-50 p-3 text-xs text-red-800">
+            <div className="rounded-2xl border border-rose-200 bg-rose-50 p-3 text-xs text-rose-900">
               {error}
             </div>
           )}
 
-          <div className="rounded-2xl border border-[#E5E4DE] bg-white p-5 shadow-xs">
+          <div className="rounded-2xl border border-[#E5E1D8] bg-white p-5 shadow-xs">
             <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2 text-sm font-semibold text-slate-900">
-                <ArrowRightLeft className="h-4 w-4 text-emerald-700" />
-                Deterministic Sell-First Rebalance Sequence
+              <div className="flex items-center gap-2 font-serif-display text-lg font-semibold text-[#171412]">
+                <ArrowRightLeft className="h-4 w-4 text-[#701735]" />
+                Deterministic Sell-First Sequence
               </div>
               {plan && (
-                <span className="rounded-full bg-[#F7F6F2] px-2.5 py-0.5 font-mono text-[11px] font-semibold text-slate-800">
+                <span className="rounded-full bg-[#F9EFF2] px-3 py-0.5 font-mono text-[10px] font-semibold text-[#701735]">
                   {plan.status}
                 </span>
               )}
             </div>
 
             <div className="mt-4 space-y-3">
-              {plan?.legs.map((leg, i) => (
-                <div
-                  key={leg.economicAssetId}
-                  className="rounded-xl border border-[#E5E4DE] bg-[#F7F6F2]/50 p-4"
-                >
-                  <div className="flex flex-wrap items-center justify-between gap-2">
-                    <div className="flex items-center gap-2.5">
-                      <span className="flex h-6 w-6 items-center justify-center rounded-full bg-white font-mono text-[11px] font-semibold text-stone-600 ring-1 ring-[#E5E4DE]">
-                        {i + 1}
-                      </span>
-                      <div>
-                        <div className="flex items-center gap-2 font-mono text-sm">
-                          <span className="font-semibold text-slate-900">{leg.symbol}</span>
-                          <span className="text-xs text-stone-500">
-                            {leg.currentWeightPct.toFixed(1)}% → {leg.targetWeightPct.toFixed(1)}%
-                          </span>
-                          <span
-                            className={`text-xs font-semibold ${
-                              leg.weightDriftPct > 0 ? "text-indigo-800" : "text-emerald-800"
-                            }`}
-                          >
-                            ({leg.weightDriftPct >= 0 ? "+" : ""}
-                            {leg.weightDriftPct.toFixed(1)}%)
-                          </span>
-                        </div>
-                        <div className="font-mono text-[11px] text-stone-500 tabular-nums">
-                          Holding {fmtUsd(leg.currentUsdCents)} · Target {fmtUsd(leg.targetUsdCents)} ·{" "}
-                          {leg.driftBps !== null ? `Live spread ${leg.driftBps.toFixed(1)} bps` : ""}
-                        </div>
-                      </div>
-                    </div>
-
-                    <span
-                      className={`rounded-lg border px-2 py-1 font-mono text-[10px] font-semibold ${
-                        leg.action.includes("CEFI_LIMIT")
-                          ? "border-amber-200 bg-amber-50 text-amber-900"
-                          : leg.action.includes("DEFI_MARKET")
-                            ? "border-emerald-200 bg-emerald-50 text-emerald-800"
-                            : "border-stone-200 bg-stone-100 text-stone-600"
-                      }`}
+              {!plan && loading
+                ? [1, 2, 3].map((n) => <div key={n} className="skeleton h-24 rounded-2xl" />)
+                : plan?.legs.map((leg, i) => (
+                    <div
+                      key={leg.economicAssetId}
+                      className="rounded-2xl border border-[#E5E1D8] bg-[#FAF8F4]/70 p-4"
                     >
-                      {leg.action}
-                    </span>
-                  </div>
+                      <div className="flex flex-wrap items-center justify-between gap-2">
+                        <div className="flex items-center gap-2.5">
+                          <span className="flex h-6 w-6 items-center justify-center rounded-full bg-white font-mono text-[11px] font-semibold text-[#701735] ring-1 ring-[#EAD2DA]">
+                            {i + 1}
+                          </span>
+                          <div>
+                            <div className="flex items-center gap-2 font-mono text-sm">
+                              <span className="font-semibold text-[#171412]">{leg.symbol}</span>
+                              <span className="text-xs text-[#625B54]">
+                                {leg.currentWeightPct.toFixed(1)}% → {leg.targetWeightPct.toFixed(1)}%
+                              </span>
+                              <span
+                                className={`text-xs font-semibold ${
+                                  leg.weightDriftPct > 0 ? "text-[#701735]" : "text-teal-800"
+                                }`}
+                              >
+                                ({leg.weightDriftPct >= 0 ? "+" : ""}
+                                {leg.weightDriftPct.toFixed(1)}%)
+                              </span>
+                            </div>
+                            <div className="font-mono text-[11px] text-[#625B54] tabular-nums">
+                              Holding {fmtUsd(leg.currentUsdCents)} · Target{" "}
+                              {fmtUsd(leg.targetUsdCents)}
+                              {leg.driftBps !== null
+                                ? ` · Live spread ${leg.driftBps.toFixed(1)} bps`
+                                : ""}
+                            </div>
+                          </div>
+                        </div>
 
-                  <p className="mt-2 text-xs text-stone-700">{leg.reasonMessage}</p>
+                        <span
+                          className={`rounded-full border px-2.5 py-1 font-mono text-[10px] font-semibold ${
+                            leg.action.includes("CEFI_LIMIT")
+                              ? "border-amber-200 bg-amber-50 text-amber-900"
+                              : leg.action.includes("DEFI_MARKET")
+                                ? "border-teal-200 bg-teal-50 text-teal-900"
+                                : "border-[#E5E1D8] bg-white text-[#625B54]"
+                          }`}
+                        >
+                          {leg.action}
+                        </span>
+                      </div>
 
-                  {leg.targetAssetId && leg.orderType && (
-                    <div className="mt-2 flex flex-wrap gap-2 rounded-lg border border-[#E5E4DE] bg-white px-3 py-1.5 font-mono text-[11px] text-stone-600">
-                      <span className="font-semibold text-slate-900">
-                        {leg.side?.toUpperCase()} {leg.targetVenue?.toUpperCase()} {leg.orderType.toUpperCase()}
-                      </span>
-                      <span>qty={leg.orderQty} ({leg.qtyUnit})</span>
-                      {leg.limitPrice && <span className="text-amber-800">limit=${leg.limitPrice}</span>}
+                      <p className="mt-2 text-xs text-[#625B54]">{leg.reasonMessage}</p>
+
+                      {leg.targetAssetId && leg.orderType && (
+                        <div className="mt-2 flex flex-wrap gap-2 rounded-xl border border-[#E5E1D8] bg-white px-3 py-1.5 font-mono text-[11px] text-[#625B54]">
+                          <span className="font-semibold text-[#171412]">
+                            {leg.side?.toUpperCase()} {leg.targetVenue?.toUpperCase()}{" "}
+                            {leg.orderType.toUpperCase()}
+                          </span>
+                          <span>
+                            qty={leg.orderQty} ({leg.qtyUnit})
+                          </span>
+                          {leg.limitPrice && (
+                            <span className="text-amber-800">limit=${leg.limitPrice}</span>
+                          )}
+                        </div>
+                      )}
                     </div>
-                  )}
-                </div>
-              ))}
+                  ))}
             </div>
 
             {plan && (
-              <div className="mt-4 flex items-center justify-between rounded-xl border border-[#E5E4DE] bg-[#F7F6F2] px-3.5 py-2.5 font-mono text-[11px] text-stone-600">
+              <div className="mt-4 flex items-center justify-between rounded-xl border border-[#E5E1D8] bg-[#FAF8F4] px-3.5 py-2.5 font-mono text-[11px] text-[#625B54]">
                 <span className="flex items-center gap-1.5">
-                  <ShieldCheck className="h-3.5 w-3.5 text-emerald-700" />
+                  <ShieldCheck className="h-3.5 w-3.5 text-[#701735]" />
                   plan_hash: {plan.planHash.slice(0, 24)}…
                 </span>
                 <span>Zero margin · Sells execute before buys</span>
