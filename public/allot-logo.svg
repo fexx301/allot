@@ -1,8 +1,7 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="728" height="207" viewBox="49 40 1456 414" role="img" aria-labelledby="title desc">
   <title id="title">Allot — Payday</title>
   <desc id="desc">A burgundy tear-off pay stub with a smaller raised portion, beside the Allot name in softly rounded serif lettering.</desc>
-  <style>@media (prefers-color-scheme: dark) { .mark { fill: #eea6bd; } }</style>
-  <g class="mark" fill="#701735">
+  <g fill="#701735">
     <g id="pay-stub" transform="translate(6 16) scale(.94)" fill-rule="evenodd">
       <path id="retained-portion" d="
         M75 182 354 142 357 151 330 190 374 214 342 260 384 285

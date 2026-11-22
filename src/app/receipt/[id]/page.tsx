@@ -2,6 +2,7 @@
 
 import { use, useEffect, useState } from "react";
 import Link from "next/link";
+import { Logo } from "@/components/Logo";
 import { ArrowLeft, CheckCircle2, Download, ExternalLink, ShieldCheck } from "lucide-react";
 import type { PaydayReceipt } from "@/lib/allot/types";
 
@@ -102,8 +103,7 @@ export default function ReceiptDetailPage({
         <div className="border-b border-dashed border-line-strong bg-paper p-7">
           <div className="flex flex-wrap items-start justify-between gap-6">
             <div>
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src="/allot-logo.svg" alt="Allot" className="mb-4 h-7 w-auto" />
+              <Logo className="mb-4 h-7" />
               <span
                 className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 font-mono text-[11px] font-semibold uppercase tracking-wider ${
                   isLive

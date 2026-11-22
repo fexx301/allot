@@ -2,6 +2,7 @@
 
 import { use, useEffect, useState } from "react";
 import Link from "next/link";
+import { Logo } from "@/components/Logo";
 import { QRCodeSVG } from "qrcode.react";
 import { ArrowLeft, Check, Code2, Copy, RefreshCw, ShieldCheck } from "lucide-react";
 import type { PaylinkProfile } from "@/lib/allot/store";
@@ -107,8 +108,7 @@ export default function PaylinkPage({
         <div className="border-b border-dashed border-line-strong bg-paper p-7">
           <div className="flex flex-wrap items-start justify-between gap-4">
             <div>
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src="/allot-logo.svg" alt="Allot" className="mb-4 h-7 w-auto" />
+              <Logo className="mb-4 h-7" />
               <div className="font-mono text-xs uppercase tracking-wider text-ink-muted">
                 USDC Invoice Request · /pay/{profile.handle}
               </div>

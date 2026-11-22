@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Fraunces, Inter, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
 import { TopNav } from "@/components/TopNav";
+import { THEME_INIT_SCRIPT } from "@/lib/theme";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -51,8 +52,13 @@ export default function RootLayout({
   return (
     <html
       lang="en"
+      // The pre-paint theme script may add class="dark" before React hydrates
+      suppressHydrationWarning
       className={`${inter.variable} ${fraunces.variable} ${jetbrainsMono.variable}`}
     >
+      <head>
+        <script dangerouslySetInnerHTML={{ __html: THEME_INIT_SCRIPT }} />
+      </head>
       <body className="min-h-screen font-sans antialiased selection:bg-brand-soft selection:text-brand-ink">
         <TopNav />
         <main className="mx-auto max-w-7xl px-4 pb-24 pt-7 sm:px-6 lg:px-8">

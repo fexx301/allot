@@ -1,7 +1,10 @@
 @import "tailwindcss";
 
+/* dark: utilities follow the .dark class (set by the theme toggle / pre-paint script), not the OS directly */
+@custom-variant dark (&:where(.dark, .dark *));
+
 :root {
-  color-scheme: light dark;
+  color-scheme: light;
   --bg-canvas: #f6f4ef;
   --bg-surface: #ffffff;
   --bg-paper: #faf8f4;
@@ -25,28 +28,27 @@
   --spark-warn: #b45309;
 }
 
-/* Dark theme follows the OS setting; every token flips, components stay unchanged */
-@media (prefers-color-scheme: dark) {
-  :root {
-    --bg-canvas: #141110;
-    --bg-surface: #1c1816;
-    --bg-paper: #221d1a;
-    --border-subtle: #37302b;
-    --border-strong: #4b423b;
-    --track: #2f2925;
-    --skeleton-base: #27211e;
-    --ink-primary: #f2ede6;
-    --ink-muted: #b0a69b;
-    --brand: #8c1f44;
-    --brand-hover: #a3294f;
-    --brand-ink: #eea6bd;
-    --brand-soft: #351922;
-    --brand-soft-hover: #45202c;
-    --brand-border: #5e2b3c;
-    --spark-up: #2dd4bf;
-    --spark-down: #fb7185;
-    --spark-warn: #fbbf24;
-  }
+/* Dark theme: every token flips, components stay unchanged. "System" mode maps the OS setting onto .dark */
+:root.dark {
+  color-scheme: dark;
+  --bg-canvas: #141110;
+  --bg-surface: #1c1816;
+  --bg-paper: #221d1a;
+  --border-subtle: #37302b;
+  --border-strong: #4b423b;
+  --track: #2f2925;
+  --skeleton-base: #27211e;
+  --ink-primary: #f2ede6;
+  --ink-muted: #b0a69b;
+  --brand: #8c1f44;
+  --brand-hover: #a3294f;
+  --brand-ink: #eea6bd;
+  --brand-soft: #351922;
+  --brand-soft-hover: #45202c;
+  --brand-border: #5e2b3c;
+  --spark-up: #2dd4bf;
+  --spark-down: #fb7185;
+  --spark-warn: #fbbf24;
 }
 
 /* Expose the palette as Tailwind utilities: bg-brand, text-ink-muted, border-line, … */

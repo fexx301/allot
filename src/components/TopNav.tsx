@@ -4,6 +4,8 @@ import { useEffect, useRef } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { LiveSpreadTicker } from "./LiveSpreadTicker";
+import { Logo } from "./Logo";
+import { ThemeToggle } from "./ThemeToggle";
 import { ArrowUpRight, FileCheck2, Landmark, Layers, Link2, Scale } from "lucide-react";
 
 const NAV_ITEMS = [
@@ -34,11 +36,9 @@ export function TopNav() {
       <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
         <div className="flex items-center gap-7">
           <Link href="/" className="group flex items-center gap-2.5">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src="/allot-logo.svg"
-              alt="Allot — Global 401(k) on True Markets"
-              className="h-8 w-auto transition duration-200 group-hover:scale-[1.02]"
+            <Logo
+              label="Allot — Global 401(k) on True Markets"
+              className="h-8 transition duration-200 group-hover:scale-[1.02]"
             />
           </Link>
 
@@ -68,6 +68,7 @@ export function TopNav() {
           <span className="hidden rounded-full border border-brand-border bg-brand-soft px-3 py-1 text-xs font-medium text-brand-ink sm:inline-flex">
             on True Markets
           </span>
+          <ThemeToggle />
           <a
             href="https://docs.truemarkets.co/gateway"
             target="_blank"
