@@ -131,4 +131,32 @@ describe("Allot Portfolio Drift Rebalancer", () => {
     expect(plan.totalBuyCents).toBe(0);
     expect(plan.totalSellCents).toBe(0);
   });
+
+  it("fails closed with MISSING_REFERENCE_PRICE when a rebalance leg lacks a live reference price", () => {
+    const quotes = makeQuotes();
+    const nvda = quotes.get("econ-nvda")!;
+    quotes.set("econ-nvda", { ...nvda, marketPrice: null });
+
+    const plan = compileRebalancePlan({
+      holdings: [
+        { economicAssetId: "econ-nvda", symbol: "NVDAC", name: "NVIDIA", qty: 4500 / 130, marketPrice: 130 },
+        { economicAssetId: "econ-aapl", symbol: "AAPLC", name: "Apple", qty: 1500 / 350, marketPrice: 350 },
+      ],
+      rule: {
+        driftThresholdPct: 3,
+        maxSpreadBps: 25,
+        minTradeCents: 500,
+        autoStageClobLimit: true,
+        targets: [
+          { economicAssetId: "econ-nvda", symbol: "NVDAC", name: "NVIDIA", weightPct: 50 },
+          { economicAssetId: "econ-aapl", symbol: "AAPLC", name: "Apple", weightPct: 50 },
+        ],
+      },
+      quotesByEconomicId: quotes,
+    });
+
+    const nvdaLeg = plan.legs.find((l) => l.symbol === "NVDAC")!;
+    expect(nvdaLeg.action).toBe("BLOCKED_NO_REFERENCE");
+    expect(nvdaLeg.reasonCode).toBe("MISSING_REFERENCE_PRICE");
+  });
 });

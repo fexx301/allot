@@ -31,6 +31,7 @@ export type RebalanceLegAction =
   | "STAGE_CEFI_LIMIT_BUY"
   | "SKIP_WITHIN_BAND"
   | "SKIP_BELOW_MIN"
+  | "BLOCKED_NO_REFERENCE"
   | "BLOCKED_DRIFT_NO_CLOB";
 
 export interface CompiledRebalanceLeg {
@@ -50,6 +51,7 @@ export interface CompiledRebalanceLeg {
     | "APPROVED"
     | "WITHIN_DRIFT_BAND"
     | "BELOW_MIN_NOTIONAL"
+    | "MISSING_REFERENCE_PRICE"
     | "PRICE_DRIFT_GUARDED"
     | "BLOCKED_DRIFT_NO_CLOB";
   reasonMessage: string;
@@ -182,7 +184,45 @@ export function compileRebalancePlan(input: {
 
     const side: "buy" | "sell" = deltaCents > 0 ? "buy" : "sell";
     const tradeUsd = absDelta / 100;
-    const effectiveDrift = driftBps ?? 0;
+
+    // Fail-closed: never execute rebalance market order when reference price or live quote is missing
+    if (
+      !snap ||
+      snap.marketPrice === null ||
+      !Number.isFinite(snap.marketPrice) ||
+      snap.marketPrice <= 0 ||
+      snap.quotePrice === null ||
+      driftBps === null
+    ) {
+      return {
+        economicAssetId: target.economicAssetId,
+        symbol: target.symbol,
+        name: target.name,
+        icon: snap?.icon ?? "",
+        currentUsdCents,
+        targetUsdCents,
+        deltaCents,
+        currentWeightPct: Number(currentWeightPct.toFixed(2)),
+        targetWeightPct: Number(normalizedTargetPct.toFixed(2)),
+        weightDriftPct,
+        side,
+        action: "BLOCKED_NO_REFERENCE",
+        reasonCode: "MISSING_REFERENCE_PRICE",
+        reasonMessage: `Missing live reference price or quote for ${target.symbol}. Rebalance leg held safely until spread can be verified.`,
+        targetVenue: null,
+        targetAssetId: null,
+        orderType: null,
+        qtyUnit: null,
+        orderQty: null,
+        limitPrice: null,
+        marketPrice: snap?.marketPrice ?? null,
+        quotePrice: snap?.quotePrice ?? null,
+        driftBps: null,
+        estimatedSavingsUsd: 0,
+      };
+    }
+
+    const effectiveDrift = driftBps;
 
     // Inside spread cap -> DeFi market execution
     if (effectiveDrift <= rule.maxSpreadBps && snap?.defiAssetId) {

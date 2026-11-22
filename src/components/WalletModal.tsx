@@ -12,6 +12,7 @@ export interface ConnectedGatewayWallet {
   evmAddress: string;
   signerPublicKey: string;
   signerFingerprint: string;
+  sharePath?: string;
 }
 
 interface WalletModalProps {
@@ -67,6 +68,7 @@ export function WalletModal({
         evmAddress: data.paylink.evmAddress,
         signerPublicKey: vault.publicKeyCompressedHex,
         signerFingerprint: vault.fingerprint,
+        sharePath: data.sharePath,
       };
       window.localStorage.setItem("allot.connected.wallet.v1", JSON.stringify(next));
       onConnected(next);

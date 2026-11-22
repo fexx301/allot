@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { makeKeyFingerprint } from "@/lib/allot/signer";
+import { buildPaylinkSharePath } from "@/lib/allot/share-token";
 import { DEFAULT_RULE, upsertPaylink } from "@/lib/allot/store";
 import { getGatewayClient, TrueMarketsApiError } from "@/lib/tm-gateway/client";
 
@@ -41,7 +42,8 @@ export async function POST(req: NextRequest) {
       createdAt: user.created_at || new Date().toISOString(),
     });
 
-    return NextResponse.json({ user, paylink }, { status: 201 });
+    const sharePath = buildPaylinkSharePath(paylink);
+    return NextResponse.json({ user, paylink, sharePath }, { status: 201 });
   } catch (err) {
     if (err instanceof z.ZodError) {
       return NextResponse.json({ error: "Invalid user creation request", issues: err.issues }, { status: 400 });

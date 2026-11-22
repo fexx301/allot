@@ -39,14 +39,17 @@ export type LegDecisionAction =
   | "STAGE_CEFI_LIMIT"
   | "CARRIED_OVER"
   | "BLOCKED_DRIFT_NO_CLOB"
+  | "BLOCKED_NO_REFERENCE"
   | "BLOCKED_NO_QUOTE";
 
 export type RefusalCode =
   | "CASH_FLOOR_PROTECTED"
   | "PRICE_DRIFT_GUARDED"
+  | "MISSING_REFERENCE_PRICE"
   | "BELOW_MIN_NOTIONAL"
   | "BLOCKED_DRIFT_NO_CLOB"
   | "NO_LIVE_QUOTE"
+  | "PREPARED_QUOTE_DRIFT_EXCEEDED"
   | "SIGNER_REQUIRED";
 
 export interface CompiledLeg {

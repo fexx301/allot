@@ -11,7 +11,9 @@ import {
   createP256SignerVault,
   stampGatewayPayload,
   verifyPlanAgainstLocalRule,
+  verifyPreparedOrderQuote,
 } from "../signer";
+import { decodeSharePayload, encodeSharePayload } from "../share-token";
 import type { LiveAssetQuoteSnapshot, PaycheckRule } from "../types";
 
 const BASE_RULE: PaycheckRule = {
@@ -190,8 +192,8 @@ describe("Allot Deterministic Split Compiler", () => {
 
     const second = compilePaydayPlan({
       depositEventId: "dep-dust-2",
-      incomingCents: 2_500, // $25 -> NVDA gets $1.25 + $1.00 carryover = $2.25 >= $2.00!
-      existingCashCents: 0,
+      incomingCents: 2_500, // $25 incoming
+      existingCashCents: first.protectedCashCents, // $1.00 carried-over USDC still in wallet from Payday 1
       priorCarryoverCents: { "econ-nvda": 100 },
       rule: tinyRule,
       quotesByEconomicId: makeQuotes(),
@@ -202,6 +204,7 @@ describe("Allot Deterministic Split Compiler", () => {
     const nvda2 = second.legs.find((l) => l.symbol === "NVDAC")!;
     expect(nvda2.effectiveCents).toBe(225);
     expect(nvda2.action).toBe("STAGE_CEFI_LIMIT");
+    expect(second.protectedCashCents).toBe(0);
   });
 
   it("computes deterministic planHash and refuses client P-256 signing when server tampers with cash floor or drift cap", async () => {
@@ -241,5 +244,107 @@ describe("Allot Deterministic Split Compiler", () => {
     expect(quantizeTickPrice(347.559)).toBe("347.55");
     expect(quantizeBaseQty(500, 129.89)).toBe("3.8494");
     expect(computeDriftBps(348.5528, 347.2132)).toBeCloseTo(38.58, 1);
+  });
+
+  // --- Audit Regression Tests (Findings 1–4) ---
+
+  it("Finding 1: holds cash fail-closed with MISSING_REFERENCE_PRICE when quote exists but market reference price is null", () => {
+    const quotes = makeQuotes();
+    const aapl = quotes.get("econ-aapl")!;
+    quotes.set("econ-aapl", { ...aapl, marketPrice: null, marketPriceTimestamp: null });
+
+    const singleLegRule: PaycheckRule = {
+      ...BASE_RULE,
+      cashFloorCents: 0,
+      legs: [{ economicAssetId: "econ-aapl", symbol: "AAPLC", name: "Apple", weightPct: 100 }],
+    };
+
+    const plan = compilePaydayPlan({
+      depositEventId: "dep-no-ref-1",
+      incomingCents: 50_000, // $500
+      existingCashCents: 0,
+      rule: singleLegRule,
+      quotesByEconomicId: quotes,
+      mode: "LIVE_GATEWAY",
+    });
+
+    expect(plan.planStatus).toBe("NO_EXECUTABLE_LEGS");
+    expect(plan.refusalSummary).toContain("MISSING_REFERENCE_PRICE");
+    expect(plan.legs[0].action).toBe("BLOCKED_NO_REFERENCE");
+    expect(plan.legs[0].reasonCode).toBe("MISSING_REFERENCE_PRICE");
+    expect(plan.legs[0].driftBps).toBeNull();
+    expect(plan.totals.executableMarketCents).toBe(0);
+    expect(plan.protectedCashCents).toBe(50_000);
+  });
+
+  it("Finding 2: carryover never breaches the protected cash floor ($110 available, $100 floor, $1.50 carryover -> max $10.00 buy, $100.00 protected)", () => {
+    const rule: PaycheckRule = {
+      ...BASE_RULE,
+      cashFloorCents: 10_000, // $100.00 floor
+      legs: [{ economicAssetId: "econ-aapl", symbol: "AAPLC", name: "Apple", weightPct: 100 }],
+    };
+
+    const plan = compilePaydayPlan({
+      depositEventId: "dep-carry-floor-1",
+      incomingCents: 1_000, // $10 incoming
+      existingCashCents: 10_000, // $100 existing -> $110 total available
+      priorCarryoverCents: { "econ-aapl": 150 }, // $1.50 prior carryover
+      rule,
+      quotesByEconomicId: makeQuotes(),
+      mode: "LIVE_GATEWAY",
+    });
+
+    expect(plan.planStatus).toBe("READY_TO_SIGN");
+    expect(plan.totals.executableMarketCents).toBe(1_000); // $10.00 max, NOT $11.50!
+    expect(plan.protectedCashCents).toBe(10_000); // exact $100.00 reserve preserved!
+    expect(plan.legs[0].effectiveCents).toBe(1_000);
+    expect(verifyPlanAgainstLocalRule(plan, rule)).toEqual({ ok: true });
+  });
+
+  it("Finding 3: verifyPreparedOrderQuote refuses signing when Gateway's prepared order quote drifts past user cap", () => {
+    // Inside cap: $347.55 vs $347.21 (+9.79 bps <= 25 bps) -> ok
+    const okRes = verifyPreparedOrderQuote({
+      symbol: "AAPLC",
+      orderType: "market",
+      benchmarkPrice: 347.21,
+      maxDriftBps: 25,
+      preparedQuote: { qty: "347.55", qty_out: "1.0" },
+    });
+    expect(okRes.ok).toBe(true);
+
+    // Drifted after approval: $350.00 vs $347.21 (+80.35 bps > 25 bps) -> refused!
+    const driftedRes = verifyPreparedOrderQuote({
+      symbol: "AAPLC",
+      orderType: "market",
+      benchmarkPrice: 347.21,
+      maxDriftBps: 25,
+      preparedQuote: { qty: "350.00", qty_out: "1.0" },
+    });
+    expect(driftedRes.ok).toBe(false);
+    if (!driftedRes.ok) {
+      expect(driftedRes.code).toBe("PREPARED_QUOTE_DRIFT_EXCEEDED");
+      expect(driftedRes.preparedDriftBps).toBeGreaterThan(25);
+    }
+
+    // Missing benchmark -> refused fail-closed!
+    const noRefRes = verifyPreparedOrderQuote({
+      symbol: "AAPLC",
+      orderType: "market",
+      benchmarkPrice: null,
+      maxDriftBps: 25,
+      preparedQuote: { price: "347.55" },
+    });
+    expect(noRefRes.ok).toBe(false);
+    if (!noRefRes.ok) {
+      expect(noRefRes.code).toBe("MISSING_REFERENCE_PRICE");
+    }
+  });
+
+  it("Finding 4: stateless share tokens round-trip receipts cleanly across serverless instances", () => {
+    const sample = { receiptId: "rcpt_stateless_1", planHash: "abc123", mode: "LIVE_QUOTES_PREVIEW" };
+    const token = encodeSharePayload(sample);
+    const decoded = decodeSharePayload<typeof sample>(token);
+    expect(decoded).toEqual(sample);
+    expect(decodeSharePayload("corrupt-token")).toBeNull();
   });
 });

@@ -1,6 +1,8 @@
 import { randomUUID } from "node:crypto";
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
+import { computeDriftBps } from "@/lib/allot/compiler";
+import { buildReceiptSharePath } from "@/lib/allot/share-token";
 import { getCarryover, saveReceipt, setCarryover } from "@/lib/allot/store";
 import type { CompiledPaydayPlan, PaydayReceipt } from "@/lib/allot/types";
 import { getGatewayClient, TrueMarketsApiError } from "@/lib/tm-gateway/client";
@@ -47,6 +49,22 @@ export async function POST(req: NextRequest) {
             await new Promise((r) => setTimeout(r, 1500));
             res = await client.getOrder(body.userId, item.orderId);
           }
+          const fillPrice = res.executed_vwap
+            ? Number(res.executed_vwap)
+            : res.avg_fill_price
+              ? Number(res.avg_fill_price)
+              : res.price
+                ? Number(res.price)
+                : undefined;
+
+          // Compute actual executed drift from real fill price vs benchmark (never silently reuse preview drift)
+          const actualDriftBps =
+            fillPrice !== undefined &&
+            item.benchmarkPrice !== undefined &&
+            item.benchmarkPrice > 0
+              ? computeDriftBps(fillPrice, item.benchmarkPrice)
+              : undefined;
+
           executions.push({
             symbol: item.symbol,
             venue: item.venue,
@@ -55,15 +73,9 @@ export async function POST(req: NextRequest) {
             status: res.status,
             requestedUsd: item.requestedUsd,
             executedQty: res.executed_qty ?? res.qty,
-            fillPrice: res.executed_vwap
-              ? Number(res.executed_vwap)
-              : res.avg_fill_price
-                ? Number(res.avg_fill_price)
-                : res.price
-                  ? Number(res.price)
-                  : undefined,
+            fillPrice,
             benchmarkPrice: item.benchmarkPrice,
-            driftBps: item.driftBps,
+            driftBps: actualDriftBps,
             feeUsd: res.fee ? Number(res.fee) : undefined,
             txHash: res.tx_hash,
           });
@@ -84,7 +96,7 @@ export async function POST(req: NextRequest) {
         }
       }
 
-      // Persist dust carryover updates on real execution
+      // Persist dust carryover updates on real execution (only decrement carryover actually consumed)
       const nextCarry = { ...getCarryover(body.userId) };
       for (const leg of plan.legs ?? []) {
         if (leg.action === "CARRIED_OVER" && leg.carryoverDeltaCents > 0) {
@@ -94,7 +106,10 @@ export async function POST(req: NextRequest) {
           leg.action === "EXECUTE_DEFI_MARKET" ||
           leg.action === "STAGE_CEFI_LIMIT"
         ) {
-          delete nextCarry[leg.economicAssetId];
+          const consumedCarry = Math.max(0, leg.effectiveCents - leg.allocatedCents);
+          const remaining = Math.max(0, (nextCarry[leg.economicAssetId] ?? 0) - consumedCarry);
+          if (remaining > 0) nextCarry[leg.economicAssetId] = remaining;
+          else delete nextCarry[leg.economicAssetId];
         }
       }
       setCarryover(body.userId, nextCarry);
@@ -151,7 +166,8 @@ export async function POST(req: NextRequest) {
     };
 
     saveReceipt(receipt);
-    return NextResponse.json({ receipt }, { status: 201 });
+    const sharePath = buildReceiptSharePath(receipt);
+    return NextResponse.json({ receipt, sharePath }, { status: 201 });
   } catch (err) {
     if (err instanceof z.ZodError) {
       return NextResponse.json({ error: "Invalid execute payload", issues: err.issues }, { status: 400 });

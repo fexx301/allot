@@ -20,7 +20,14 @@ export default function PaylinkPage({
   const [checking, setChecking] = useState(false);
 
   useEffect(() => {
-    fetch(`/api/paylinks?handle=${encodeURIComponent(handle)}`)
+    const token =
+      typeof window !== "undefined"
+        ? new URLSearchParams(window.location.search).get("d")
+        : null;
+    const qs = token
+      ? `handle=${encodeURIComponent(handle)}&d=${encodeURIComponent(token)}`
+      : `handle=${encodeURIComponent(handle)}`;
+    fetch(`/api/paylinks?${qs}`)
       .then((r) => r.json())
       .then((d) => setProfile(d.paylink ?? null))
       .finally(() => setLoading(false));

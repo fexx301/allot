@@ -22,7 +22,14 @@ export default function ReceiptDetailPage({
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetch(`/api/receipts?id=${encodeURIComponent(id)}`)
+    const token =
+      typeof window !== "undefined"
+        ? new URLSearchParams(window.location.search).get("d")
+        : null;
+    const qs = token
+      ? `id=${encodeURIComponent(id)}&d=${encodeURIComponent(token)}`
+      : `id=${encodeURIComponent(id)}`;
+    fetch(`/api/receipts?${qs}`)
       .then((r) => r.json())
       .then((d) => setReceipt(d.receipt ?? null))
       .finally(() => setLoading(false));
@@ -173,14 +180,24 @@ export default function ReceiptDetailPage({
                         )}
                       </td>
                       <td className="py-3 pr-4">
-                        {leg.marketPrice ? `$${leg.marketPrice.toFixed(2)}` : "—"} /{" "}
-                        {leg.quotePrice ? `$${leg.quotePrice.toFixed(2)}` : "—"}
-                        {leg.driftBps !== null && (
-                          <span className="ml-1 text-stone-500">
-                            ({leg.driftBps >= 0 ? "+" : ""}
-                            {leg.driftBps.toFixed(1)} bps)
-                          </span>
-                        )}
+                        {(() => {
+                          const shownPrice = exec?.fillPrice ?? leg.quotePrice;
+                          const shownBench = exec?.benchmarkPrice ?? leg.marketPrice;
+                          const shownDrift =
+                            exec?.driftBps !== undefined ? exec.driftBps : leg.driftBps;
+                          return (
+                            <>
+                              {shownBench ? `$${shownBench.toFixed(2)}` : "—"} /{" "}
+                              {shownPrice ? `$${shownPrice.toFixed(2)}` : "—"}
+                              {shownDrift !== null && shownDrift !== undefined && (
+                                <span className="ml-1 text-stone-500">
+                                  ({shownDrift >= 0 ? "+" : ""}
+                                  {shownDrift.toFixed(1)} bps)
+                                </span>
+                              )}
+                            </>
+                          );
+                        })()}
                       </td>
                       <td className="py-3 pr-4">
                         <span className="rounded bg-[#F7F6F2] px-1.5 py-0.5 text-[10px] font-semibold text-slate-800">

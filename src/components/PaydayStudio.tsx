@@ -22,6 +22,7 @@ import {
   loadOrCreateBrowserVault,
   stampGatewayPayload,
   verifyPlanAgainstLocalRule,
+  verifyPreparedOrderQuote,
   type LocalP256SignerVault,
 } from "@/lib/allot/signer";
 import type { CompiledPaydayPlan, PaycheckRule, SplitLegConfig } from "@/lib/allot/types";
@@ -488,6 +489,7 @@ export function PaydayStudio() {
           type: "market" | "limit";
           ok: boolean;
           orderId?: string;
+          quote?: { price?: string; qty?: string; qty_out?: string } | null;
           payloads?: Array<{ payload: string }>;
           error?: string;
           issues?: Array<{ code?: string; message?: string }>;
@@ -504,7 +506,24 @@ export function PaydayStudio() {
           );
         }
 
-        // Sign every returned Gateway payload locally with browser P-256 key!
+        // Re-verify every prepared order's FRESH quote against the user's maxDriftBps cap BEFORE signing!
+        for (const p of readyOrders) {
+          const legMeta = executableLegs.find((l) => l.symbol === p.symbol);
+          const check = verifyPreparedOrderQuote({
+            symbol: p.symbol,
+            orderType: p.type,
+            benchmarkPrice: legMeta?.marketPrice ?? null,
+            maxDriftBps: currentRule.maxDriftBps,
+            preparedQuote: p.quote,
+          });
+          if (!check.ok) {
+            // Abort signing and trigger a fresh plan compilation so user can re-decide
+            void compileLivePlan();
+            throw new Error(`${check.code}: ${check.reason}`);
+          }
+        }
+
+        // Sign every verified Gateway payload locally with browser P-256 key!
         signedOrders = await Promise.all(
           readyOrders.map(async (p) => {
             const legMeta = executableLegs.find((l) => l.symbol === p.symbol);
@@ -541,7 +560,7 @@ export function PaydayStudio() {
       const execData = await execRes.json();
       if (!execRes.ok) throw new Error(execData.error || "Execution failed");
 
-      router.push(`/receipt/${execData.receipt.receiptId}`);
+      router.push(execData.sharePath || `/receipt/${execData.receipt.receiptId}`);
     } catch (err) {
       setExecMessage({
         type: "err",
@@ -592,7 +611,7 @@ export function PaydayStudio() {
                 : "Create Non-Custodial Wallet"}
             </button>
             <Link
-              href={`/pay/${connectedWallet?.handle || "demo-engineer"}`}
+              href={connectedWallet?.sharePath || `/pay/${connectedWallet?.handle || "demo-engineer"}`}
               className="inline-flex items-center justify-center gap-1.5 rounded-xl border border-[#E5E4DE] bg-[#F7F6F2] px-4 py-2 text-xs font-medium text-slate-800 transition hover:bg-stone-200/60"
             >
               Open Shareable USDC Paylink

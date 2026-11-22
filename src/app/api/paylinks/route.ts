@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
-import { getPaylink, listPaylinks, upsertPaylink } from "@/lib/allot/store";
+import { decodeSharePayload } from "@/lib/allot/share-token";
+import { getPaylink, listPaylinks, upsertPaylink, type PaylinkProfile } from "@/lib/allot/store";
 
 export const dynamic = "force-dynamic";
 
@@ -14,12 +15,17 @@ const UpdatePaylinkSchema = z.object({
 
 export async function GET(req: NextRequest) {
   const handle = req.nextUrl.searchParams.get("handle");
+  const token = req.nextUrl.searchParams.get("d");
   if (handle) {
     const profile = getPaylink(handle);
-    if (!profile) {
-      return NextResponse.json({ error: "Paylink not found" }, { status: 404 });
+    if (profile) {
+      return NextResponse.json({ paylink: profile });
     }
-    return NextResponse.json({ paylink: profile });
+    const decoded = decodeSharePayload<PaylinkProfile>(token);
+    if (decoded && decoded.handle === handle.toLowerCase() && decoded.userId) {
+      return NextResponse.json({ paylink: decoded });
+    }
+    return NextResponse.json({ error: "Paylink not found" }, { status: 404 });
   }
   return NextResponse.json({ paylinks: listPaylinks() });
 }

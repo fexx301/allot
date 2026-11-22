@@ -225,11 +225,17 @@ export function compilePaydayPlan(input: CompilePaydayInput): CompiledPaydayPlan
   }
 
   // Only allocate true surplus above the protected cash floor (never spend more than incoming + surplus)
-  const allocatableSurplusCents = Math.min(safeIncoming, totalCashBeforeCents - cashFloorCents);
+  const maxSpendableAboveFloorCents = Math.max(0, totalCashBeforeCents - cashFloorCents);
+  const allocatableSurplusCents = Math.min(safeIncoming, maxSpendableAboveFloorCents);
   const { allocations, retainedCashCents } = allocateCentsLargestRemainder(
     allocatableSurplusCents,
     rule.legs,
   );
+
+  // Reserve invariant: total spent across ALL legs (including released prior carryover)
+  // MUST NEVER exceed maxSpendableAboveFloorCents, so protectedCashCents >= cashFloorCents ALWAYS.
+  const totalBaseAllocatedCents = Array.from(allocations.values()).reduce((a, b) => a + b, 0);
+  let remainingCarryHeadroomCents = Math.max(0, maxSpendableAboveFloorCents - totalBaseAllocatedCents);
 
   const refusals = new Set<RefusalCode>();
   let executableMarketCents = 0;
@@ -241,7 +247,8 @@ export function compilePaydayPlan(input: CompilePaydayInput): CompiledPaydayPlan
   const compiledLegs: CompiledLeg[] = rule.legs.map((leg) => {
     const allocatedCents = allocations.get(leg.economicAssetId) ?? 0;
     const priorCarry = Math.max(0, Math.round(priorCarryoverCents[leg.economicAssetId] ?? 0));
-    const effectiveCents = allocatedCents + priorCarry;
+    const usablePriorCarry = Math.min(priorCarry, remainingCarryHeadroomCents);
+    const effectiveCents = allocatedCents + usablePriorCarry;
     const snap = quotesByEconomicId.get(leg.economicAssetId);
 
     // Hard Refusal #2: BELOW_MIN_NOTIONAL -> carry exact cents forward
@@ -308,11 +315,43 @@ export function compilePaydayPlan(input: CompilePaydayInput): CompiledPaydayPlan
       };
     }
 
-    const driftBps = snap.marketPrice ? computeDriftBps(snap.quotePrice, snap.marketPrice) : 0;
+    // Hard Refusal #2b (Fail-Closed): MISSING_REFERENCE_PRICE -> hold cash until spread can be measured
+    if (snap.marketPrice === null || !Number.isFinite(snap.marketPrice) || snap.marketPrice <= 0) {
+      refusals.add("MISSING_REFERENCE_PRICE");
+      blockedCents += allocatedCents;
+      return {
+        economicAssetId: leg.economicAssetId,
+        symbol: leg.symbol,
+        name: leg.name,
+        icon: snap.icon,
+        weightPct: leg.weightPct,
+        allocatedCents,
+        effectiveCents,
+        action: "BLOCKED_NO_REFERENCE",
+        reasonCode: "MISSING_REFERENCE_PRICE",
+        reasonMessage: `No live reference price available for ${leg.symbol}. Refused unverified market fill — USDC held safely until spread can be measured.`,
+        targetVenue: null,
+        targetAssetId: null,
+        targetChain: null,
+        orderType: null,
+        qtyUnit: null,
+        orderQty: null,
+        limitPrice: null,
+        marketPrice: null,
+        quotePrice: snap.quotePrice,
+        quoteFeeUsd: snap.quoteFeeUsd,
+        driftBps: null,
+        estimatedSavingsUsd: 0,
+        carryoverDeltaCents: 0,
+      };
+    }
+
+    const driftBps = computeDriftBps(snap.quotePrice, snap.marketPrice);
     const legUsd = effectiveCents / 100;
 
     // Happy Path: Live Gateway DeFi quote is inside user's maxDriftBps guard!
     if (driftBps <= rule.maxDriftBps) {
+      remainingCarryHeadroomCents = Math.max(0, remainingCarryHeadroomCents - usablePriorCarry);
       executableMarketCents += effectiveCents;
       return {
         economicAssetId: leg.economicAssetId,
@@ -343,7 +382,8 @@ export function compilePaydayPlan(input: CompilePaydayInput): CompiledPaydayPlan
 
     // Hard Refusal #3: PRICE_DRIFT_GUARDED!
     // Auto-route via economic_asset_id to paired CeFi CLOB limit order if supported
-    if (rule.autoStageClobLimit && snap.supportsClobLimit && snap.cefiAssetId && snap.marketPrice) {
+    if (rule.autoStageClobLimit && snap.supportsClobLimit && snap.cefiAssetId) {
+      remainingCarryHeadroomCents = Math.max(0, remainingCarryHeadroomCents - usablePriorCarry);
       refusals.add("PRICE_DRIFT_GUARDED");
       const targetCapPrice = snap.marketPrice * (1 + rule.maxDriftBps / 10_000);
       const limitPriceStr = quantizeTickPrice(targetCapPrice);
