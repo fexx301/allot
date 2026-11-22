@@ -1,22 +1,36 @@
 "use client";
 
+import { useEffect, useRef } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { LiveSpreadTicker } from "./LiveSpreadTicker";
 import { ArrowUpRight, FileCheck2, Landmark, Layers, Link2, Scale } from "lucide-react";
 
 const NAV_ITEMS = [
   { href: "/", label: "Payday Studio", icon: Layers },
   { href: "/rebalance", label: "Rebalancer", icon: Scale },
   { href: "/pay/femi", label: "USDC Paylink", icon: Link2 },
-  { href: "/orders", label: "Holdings & CLOB", icon: Landmark },
+  { href: "/orders", label: "Holdings", icon: Landmark },
   { href: "/receipts", label: "Receipts", icon: FileCheck2 },
 ];
 
+function isActive(href: string, pathname: string) {
+  if (href === "/") return pathname === "/";
+  return pathname.startsWith(href === "/pay/femi" ? "/pay" : href);
+}
+
 export function TopNav() {
   const pathname = usePathname();
+  const mobileActiveRef = useRef<HTMLAnchorElement>(null);
+
+  // Keep the current tab visible in the horizontally-scrolling mobile nav
+  useEffect(() => {
+    mobileActiveRef.current?.scrollIntoView({ block: "nearest", inline: "center" });
+  }, [pathname]);
 
   return (
-    <header className="sticky top-0 z-40 border-b border-[#E5E1D8] bg-[#F6F4EF]/92 backdrop-blur-md">
+    <>
+    <header className="sticky top-0 z-40 border-b border-line bg-canvas/92 backdrop-blur-md">
       <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
         <div className="flex items-center gap-7">
           <Link href="/" className="group flex items-center gap-2.5">
@@ -28,23 +42,21 @@ export function TopNav() {
             />
           </Link>
 
-          <nav className="hidden items-center gap-1 md:flex">
+          <nav aria-label="Main" className="hidden items-center gap-1 md:flex">
             {NAV_ITEMS.map(({ href, label, icon: Icon }) => {
-              const active =
-                href === "/"
-                  ? pathname === "/"
-                  : pathname.startsWith(href === "/pay/femi" ? "/pay" : href);
+              const active = isActive(href, pathname);
               return (
                 <Link
                   key={href}
                   href={href}
+                  aria-current={active ? "page" : undefined}
                   className={`flex items-center gap-1.5 rounded-full px-3.5 py-1.5 text-[13px] font-medium transition ${
                     active
-                      ? "bg-[#701735] text-white shadow-xs"
-                      : "text-[#575049] hover:bg-white/80 hover:text-[#171412]"
+                      ? "bg-brand text-white shadow-xs"
+                      : "text-ink-muted hover:bg-surface/80 hover:text-ink"
                   }`}
                 >
-                  <Icon className="h-3.5 w-3.5" />
+                  <Icon aria-hidden className="h-3.5 w-3.5" />
                   {label}
                 </Link>
               );
@@ -53,44 +65,49 @@ export function TopNav() {
         </div>
 
         <div className="flex items-center gap-2.5">
-          <span className="hidden items-center gap-1.5 rounded-full border border-[#EAD2DA] bg-[#F9EFF2] px-3 py-1 text-xs font-medium text-[#701735] sm:inline-flex">
-            <span className="h-1.5 w-1.5 rounded-full bg-[#701735] animate-pulse" />
-            True Markets Gateway
+          <span className="hidden rounded-full border border-brand-border bg-brand-soft px-3 py-1 text-xs font-medium text-brand-ink sm:inline-flex">
+            on True Markets
           </span>
           <a
             href="https://docs.truemarkets.co/gateway"
             target="_blank"
             rel="noreferrer"
-            className="inline-flex items-center gap-1 rounded-full border border-[#E5E1D8] bg-white px-3 py-1.5 text-xs font-medium text-[#575049] transition hover:border-[#701735]/40 hover:text-[#701735]"
+            className="inline-flex items-center gap-1 rounded-full border border-line bg-surface px-3 py-1.5 text-xs font-medium text-ink-muted transition hover:border-brand-ink/40 hover:text-brand-ink"
           >
             API Docs
-            <ArrowUpRight className="h-3 w-3" />
+            <ArrowUpRight aria-hidden className="h-3 w-3" />
+            <span className="sr-only">(opens in new tab)</span>
           </a>
         </div>
       </div>
 
       {/* Mobile Nav */}
-      <div className="flex items-center gap-1.5 overflow-x-auto border-t border-[#E5E1D8] px-4 py-2 md:hidden">
+      <nav
+        aria-label="Main"
+        className="scroll-fade-x flex items-center gap-1.5 overflow-x-auto border-t border-line px-4 py-2 pr-10 md:hidden"
+      >
         {NAV_ITEMS.map(({ href, label }) => {
-          const active =
-            href === "/"
-              ? pathname === "/"
-              : pathname.startsWith(href === "/pay/femi" ? "/pay" : href);
+          const active = isActive(href, pathname);
           return (
             <Link
               key={href}
               href={href}
+              ref={active ? mobileActiveRef : undefined}
+              aria-current={active ? "page" : undefined}
               className={`shrink-0 rounded-full px-3 py-1 text-xs font-medium ${
                 active
-                  ? "bg-[#701735] text-white"
-                  : "bg-white text-[#575049] ring-1 ring-[#E5E1D8]"
+                  ? "bg-brand text-white"
+                  : "bg-surface text-ink-muted ring-1 ring-line"
               }`}
             >
               {label}
             </Link>
           );
         })}
-      </div>
+      </nav>
     </header>
+    {/* Market tape only where prices drive decisions; avoids an idle WebSocket elsewhere */}
+    {pathname === "/" && <LiveSpreadTicker />}
+    </>
   );
 }

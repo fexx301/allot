@@ -144,21 +144,21 @@ export function LiveSpreadTicker() {
         {items.map((t) => (
           <div
             key={`${prefix}-${t.symbol}`}
-            className="flex shrink-0 items-center gap-1.5 font-mono text-[11px] tabular-nums"
+            className="flex shrink-0 items-center gap-1.5 font-mono text-xs tabular-nums"
           >
-            <span className="font-semibold text-[#171412]">{t.symbol}</span>
+            <span className="font-semibold text-ink">{t.symbol}</span>
             {SHORT_NAMES[t.symbol] && (
-              <span className="hidden font-sans text-[11px] text-[#857D74] sm:inline">
+              <span className="hidden font-sans text-xs text-ink-muted sm:inline">
                 {SHORT_NAMES[t.symbol]}
               </span>
             )}
-            <span className="text-[#453F3A]">${t.price.toFixed(2)}</span>
+            <span className="text-ink">${t.price.toFixed(2)}</span>
             {t.change24h !== undefined && Number.isFinite(t.change24h) && (
               <span
-                className={`rounded-full px-1.5 py-0.5 text-[10px] font-medium ${
+                className={`rounded-full px-1.5 py-0.5 text-[11px] font-medium ${
                   t.change24h >= 0
-                    ? "bg-teal-50 text-teal-800"
-                    : "bg-rose-50 text-rose-800"
+                    ? "bg-teal-50 dark:bg-teal-950/40 text-teal-800 dark:text-teal-300"
+                    : "bg-rose-50 dark:bg-rose-950/40 text-rose-800 dark:text-rose-300"
                 }`}
               >
                 {t.change24h >= 0 ? "+" : ""}
@@ -172,16 +172,16 @@ export function LiveSpreadTicker() {
   }
 
   return (
-    <div className="border-b border-[#E5E1D8] bg-[#FAF8F4]">
+    <div className="border-b border-line bg-paper">
       <div className="mx-auto flex max-w-7xl items-center px-4 py-2 text-xs sm:px-6 lg:px-8">
-        <div className="z-10 flex shrink-0 items-center gap-1.5 border-r border-[#E5E1D8] bg-[#FAF8F4] pr-3.5 font-mono text-[10px] font-semibold uppercase tracking-widest text-[#701735]">
+        <div className="z-10 flex shrink-0 items-center gap-1.5 border-r border-line bg-paper pr-3.5 font-mono text-[11px] font-semibold uppercase tracking-widest text-brand-ink">
           <Radio
             className={`h-3 w-3 ${
               wsState === "live"
-                ? "text-[#701735] animate-pulse"
+                ? "text-brand-ink motion-safe:animate-pulse"
                 : wsState === "connecting"
-                  ? "text-amber-600"
-                  : "text-stone-400"
+                  ? "text-amber-600 dark:text-amber-400"
+                  : "text-ink-muted"
             }`}
           />
           {wsState === "live"
@@ -201,7 +201,7 @@ export function LiveSpreadTicker() {
           ) : (
             <div className="allot-marquee-track" title="Hover to pause live tape">
               {renderTapeSegment("a")}
-              {renderTapeSegment("b")}
+              <div aria-hidden className="contents">{renderTapeSegment("b")}</div>
             </div>
           )}
         </div>

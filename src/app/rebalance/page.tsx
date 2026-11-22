@@ -34,8 +34,8 @@ const PRESETS: Array<{
 }> = [
   {
     id: "nvda-rally",
-    label: "Post-Earnings Drift (NVIDIA +40% Rally)",
-    subtitle: "NVDAC bloated to ~45% vs 30% target · SPCXC underweight → Sell overweight first, route drifted buys via CeFi CLOB limit",
+    label: "NVIDIA rallied 40%",
+    subtitle: "NVIDIA grew to ~45% of your portfolio vs a 30% target. Allot sells some first, then uses the cash to top up what fell behind.",
     holdings: [
       { symbol: "NVDAC", name: "NVIDIA", qty: 35, targetWeightPct: 30 },
       { symbol: "AAPLC", name: "Apple", qty: 10.5, targetWeightPct: 35 },
@@ -45,8 +45,8 @@ const PRESETS: Array<{
   },
   {
     id: "balanced",
-    label: "Balanced Portfolio (±3% No-Churn Band)",
-    subtitle: "All holdings within ±3% of target → deterministic no-churn skip (0 unnecessary trades)",
+    label: "Already balanced",
+    subtitle: "Every holding is within 3% of target, so Allot makes no trades and you pay no fees.",
     holdings: [
       { symbol: "AAPLC", name: "Apple", qty: 10.1, targetWeightPct: 35 },
       { symbol: "NVDAC", name: "NVIDIA", qty: 23.1, targetWeightPct: 30 },
@@ -55,6 +55,40 @@ const PRESETS: Array<{
     ],
   },
 ];
+
+const ACTION_LABELS: Record<string, string> = {
+  SELL_DEFI_MARKET: "Sell now",
+  BUY_DEFI_MARKET: "Buy now",
+  STAGE_CEFI_LIMIT_SELL: "Limit sell",
+  STAGE_CEFI_LIMIT_BUY: "Limit buy",
+  SKIP_WITHIN_BAND: "On target · skip",
+  SKIP_BELOW_MIN: "Too small · skip",
+  BLOCKED_NO_REFERENCE: "Held · No price",
+  BLOCKED_STALE_REFERENCE: "Held · Old price",
+  BLOCKED_DRIFT_NO_CLOB: "Held · Price too high",
+};
+
+/** Plain-English line per rebalance leg; the engine's raw reasonMessage moves to "Technical details". */
+function plainRebalanceSummary(leg: CompiledRebalancePlan["legs"][number], bandPct: number): string {
+  const amount = fmtUsd(Math.abs(leg.deltaCents));
+  const verb = leg.side === "sell" ? "Sell" : "Buy";
+  switch (leg.action) {
+    case "SELL_DEFI_MARKET":
+    case "BUY_DEFI_MARKET":
+      return `${verb} ${amount} now at the market price to get back to ${leg.targetWeightPct.toFixed(0)}%.`;
+    case "STAGE_CEFI_LIMIT_SELL":
+    case "STAGE_CEFI_LIMIT_BUY":
+      return `${verb} ${amount}, but the price is over your limit, so Allot places a limit order at $${leg.limitPrice ?? "your price"} instead.`;
+    case "SKIP_WITHIN_BAND":
+      return `Only ${Math.abs(leg.weightDriftPct).toFixed(1)}% off target, inside your ±${bandPct}% range, so no trade.`;
+    case "SKIP_BELOW_MIN":
+      return "The change is too small to be worth a trade.";
+    case "BLOCKED_DRIFT_NO_CLOB":
+      return "Price is over your limit and no limit order is available, so this is held.";
+    default:
+      return "No reliable price right now, so this is held.";
+  }
+}
 
 function fmtUsd(cents: number): string {
   return `$${(cents / 100).toLocaleString("en-US", {
@@ -205,31 +239,32 @@ export default function RebalancePage() {
 
   return (
     <div className="space-y-6">
-      <section className="overflow-hidden rounded-3xl border border-[#E5E1D8] bg-white shadow-sm">
+      <section className="overflow-hidden rounded-3xl border border-line bg-surface shadow-sm">
         <div className="p-6">
           <div className="flex flex-wrap items-start justify-between gap-4">
             <div className="max-w-2xl">
-              <span className="inline-flex items-center gap-1.5 rounded-full border border-[#EAD2DA] bg-[#F9EFF2] px-3 py-0.5 text-xs font-medium text-[#701735]">
-                <Scale className="h-3 w-3" />
-                Drift Rebalancer · Live Gateway Quotes
+              <span className="inline-flex items-center gap-1.5 rounded-full border border-brand-border bg-brand-soft px-3 py-0.5 text-xs font-medium text-brand-ink">
+                <Scale aria-hidden className="h-3 w-3" />
+                Rebalancer
               </span>
-              <h1 className="font-serif-display mt-2.5 text-2xl font-semibold tracking-tight text-[#171412] sm:text-3xl">
-                Keep your Global 401(k) on target — without weekend slippage.
+              <h1 className="font-serif-display mt-2.5 text-2xl font-semibold tracking-tight text-ink sm:text-3xl">
+                Keep your portfolio on target without overpaying.
               </h1>
-              <p className="mt-1.5 text-sm text-[#625B54]">
-                When one equity rallies past its target weight, Allot trims overweight shares first
-                so USDC proceeds fund underweight buys, skips minor noise inside your drift band,
-                and auto-routes any wide-spread leg to a resting{" "}
-                <span className="font-medium text-[#171412]">CeFi CLOB limit order</span>.
+              <p className="mt-1.5 text-sm text-ink-muted">
+                When one stock grows past its target, Allot sells a little of it first and uses that
+                cash to buy what fell behind. Small moves are ignored, and if a price is too high
+                Allot places a <span className="font-medium text-ink">limit order</span> instead of
+                overpaying.
               </p>
             </div>
             <button
+              type="button"
               onClick={() => compile()}
               disabled={loading}
-              className="inline-flex items-center gap-1.5 rounded-full border border-[#E5E1D8] bg-[#FAF8F4] px-4 py-2 text-xs font-medium text-[#171412] hover:border-[#701735]/40"
+              className="inline-flex items-center gap-1.5 rounded-full border border-line bg-paper px-4 py-2 text-xs font-medium text-ink hover:border-brand-ink/40"
             >
-              <RefreshCw className={`h-3.5 w-3.5 ${loading ? "animate-spin" : ""}`} />
-              Re-quote Live
+              <RefreshCw aria-hidden className={`h-3.5 w-3.5 ${loading ? "animate-spin" : ""}`} />
+              Refresh prices
             </button>
           </div>
 
@@ -237,47 +272,51 @@ export default function RebalancePage() {
             {PRESETS.map((p) => (
               <button
                 key={p.id}
+                type="button"
+                aria-pressed={presetId === p.id}
                 onClick={() => {
                   setSignedStamp(null);
                   selectPreset(p.id);
                 }}
                 className={`rounded-2xl border p-4 text-left transition ${
                   presetId === p.id
-                    ? "border-[#701735] bg-[#FAF8F4] ring-1 ring-[#701735]"
-                    : "border-[#E5E1D8] bg-white hover:border-[#701735]/40"
+                    ? "border-brand-ink bg-paper ring-1 ring-brand-ink"
+                    : "border-line bg-surface hover:border-brand-ink/40"
                 }`}
               >
                 <div className="flex items-center justify-between">
-                  <span className="font-serif-display text-base font-semibold text-[#171412]">
+                  <span className="font-serif-display text-base font-semibold text-ink">
                     {p.label}
                   </span>
-                  {presetId === p.id && <CheckCircle2 className="h-4 w-4 text-[#701735]" />}
+                  {presetId === p.id && <CheckCircle2 className="h-4 w-4 text-brand-ink" />}
                 </div>
-                <p className="mt-1 text-xs text-[#625B54]">{p.subtitle}</p>
+                <p className="mt-1 text-xs text-ink-muted">{p.subtitle}</p>
               </button>
             ))}
 
             <button
+              type="button"
+              aria-pressed={presetId === "live-base-wallet"}
               onClick={loadLiveBaseHoldings}
               disabled={loadingLiveWallet}
               className={`rounded-2xl border p-4 text-left transition ${
                 presetId === "live-base-wallet"
-                  ? "border-[#701735] bg-[#F9EFF2] ring-1 ring-[#701735]"
-                  : "border-[#EAD2DA] bg-[#F9EFF2]/50 hover:border-[#701735]"
+                  ? "border-brand-ink bg-brand-soft ring-1 ring-brand-ink"
+                  : "border-brand-border bg-brand-soft/50 hover:border-brand-ink"
               }`}
             >
               <div className="flex items-center justify-between">
-                <span className="inline-flex items-center gap-1.5 font-serif-display text-base font-semibold text-[#701735]">
+                <span className="inline-flex items-center gap-1.5 font-serif-display text-base font-semibold text-brand-ink">
                   <Wallet className="h-4 w-4" />
-                  {loadingLiveWallet ? "Loading Live Holdings…" : "Load Live Base Holdings"}
+                  {loadingLiveWallet ? "Loading your holdings…" : "Use my real holdings"}
                 </span>
                 {presetId === "live-base-wallet" && (
-                  <CheckCircle2 className="h-4 w-4 text-[#701735]" />
+                  <CheckCircle2 className="h-4 w-4 text-brand-ink" />
                 )}
               </div>
-              <p className="mt-1 text-xs text-[#625B54]">
-                Pulls real AAPLC &amp; NVDAC share balances from True Markets Gateway to compute
-                actual live portfolio drift.
+              <p className="mt-1 text-xs text-ink-muted">
+                Loads your actual Apple and NVIDIA balances from True Markets to see how far off
+                target you are.
               </p>
             </button>
           </div>
@@ -286,17 +325,21 @@ export default function RebalancePage() {
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-12">
         {/* Controls */}
-        <section className="space-y-4 rounded-2xl border border-[#E5E1D8] bg-white p-5 shadow-xs lg:col-span-4">
-          <h2 className="font-serif-display text-lg font-semibold text-[#171412]">
-            Rebalance Guardrails
+        <section className="space-y-4 rounded-2xl border border-line bg-surface p-5 shadow-xs lg:col-span-4">
+          <h2 className="font-serif-display text-lg font-semibold text-ink">
+            Rebalance Rules
           </h2>
 
           <div>
             <div className="flex justify-between text-xs">
-              <span className="font-medium text-[#171412]">No-Churn Drift Band</span>
-              <span className="font-mono font-semibold text-[#701735]">±{driftThresholdPct}%</span>
+              <label htmlFor="rebalance-band" className="font-medium text-ink">
+                Ignore moves smaller than
+              </label>
+              <span className="font-mono font-semibold text-brand-ink">±{driftThresholdPct}%</span>
             </div>
             <input
+              id="rebalance-band"
+              aria-valuetext={`plus or minus ${driftThresholdPct}%`}
               type="range"
               min={1}
               max={15}
@@ -309,10 +352,16 @@ export default function RebalancePage() {
 
           <div>
             <div className="flex justify-between text-xs">
-              <span className="font-medium text-[#171412]">Max Spread Guard</span>
-              <span className="font-mono font-semibold text-amber-800">{maxSpreadBps} bps</span>
+              <label htmlFor="rebalance-slippage" className="font-medium text-ink">
+                Max price above market
+              </label>
+              <span className="font-mono font-semibold text-amber-800 dark:text-amber-300">
+                {(maxSpreadBps / 100).toFixed(2)}%
+              </span>
             </div>
             <input
+              id="rebalance-slippage"
+              aria-valuetext={`${(maxSpreadBps / 100).toFixed(2)}%`}
               type="range"
               min={5}
               max={100}
@@ -323,35 +372,36 @@ export default function RebalancePage() {
             />
           </div>
 
-          <div className="border-t border-[#E5E1D8] pt-4">
-            <h3 className="font-mono text-[10px] font-semibold uppercase tracking-wider text-[#625B54]">
-              Current Share Balances
+          <div className="border-t border-line pt-4">
+            <h3 className="font-mono text-[11px] font-semibold uppercase tracking-wider text-ink-muted">
+              Shares you hold now
             </h3>
             <div className="mt-3 space-y-2">
               {holdings.map((h, idx) => (
                 <div
                   key={h.symbol}
-                  className="flex items-center justify-between rounded-xl border border-[#E5E1D8] bg-[#FAF8F4] px-3 py-2 text-xs"
+                  className="flex items-center justify-between rounded-xl border border-line bg-paper px-3 py-2 text-xs"
                 >
                   <div>
-                    <span className="font-mono font-semibold text-[#171412]">{h.symbol}</span>
-                    <span className="ml-1.5 text-[#625B54]">target {h.targetWeightPct}%</span>
+                    <span className="font-mono font-semibold text-ink">{h.symbol}</span>
+                    <span className="ml-1.5 text-ink-muted">target {h.targetWeightPct}%</span>
                   </div>
-                  <div className="flex items-center gap-1 rounded-lg border border-[#E5E1D8] bg-white px-2 py-1 focus-within:border-[#701735]">
+                  <div className="flex items-center gap-1 rounded-lg border border-line bg-surface px-2 py-1 focus-within:border-brand-ink">
                     <input
                       type="number"
                       min={0}
                       step={0.5}
                       value={h.qty}
+                      aria-label={`${h.symbol} shares held`}
                       onChange={(e) => {
                         const val = Math.max(0, Number(e.target.value));
                         setHoldings((prev) =>
                           prev.map((row, i) => (i === idx ? { ...row, qty: val } : row)),
                         );
                       }}
-                      className="w-14 text-right font-mono font-semibold text-[#171412] outline-none"
+                      className="w-14 text-right font-mono font-semibold text-ink outline-none"
                     />
-                    <span className="text-[10px] text-[#625B54]">sh</span>
+                    <span aria-hidden className="text-[11px] text-ink-muted">sh</span>
                   </div>
                 </div>
               ))}
@@ -362,55 +412,55 @@ export default function RebalancePage() {
         {/* Compiled Rebalance Plan */}
         <section className="space-y-4 lg:col-span-8">
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-            <div className="rounded-2xl border border-[#E5E1D8] bg-white p-4 shadow-xs">
-              <div className="font-mono text-[10px] uppercase tracking-wider text-[#625B54]">
-                Equity Value
+            <div className="rounded-2xl border border-line bg-surface p-4 shadow-xs">
+              <div className="font-mono text-[11px] uppercase tracking-wider text-ink-muted">
+                Portfolio value
               </div>
-              <div className="font-serif-display mt-1 text-2xl font-semibold text-[#171412] tabular-nums">
+              <div className="font-serif-display mt-1 text-2xl font-semibold text-ink tabular-nums">
                 {plan ? fmtUsd(plan.totalPortfolioCents) : "—"}
               </div>
             </div>
-            <div className="rounded-2xl border border-[#E5E1D8] bg-white p-4 shadow-xs">
-              <div className="font-mono text-[10px] uppercase tracking-wider text-[#625B54]">
-                Trim (Sell First)
+            <div className="rounded-2xl border border-line bg-surface p-4 shadow-xs">
+              <div className="font-mono text-[11px] uppercase tracking-wider text-ink-muted">
+                Sell first
               </div>
-              <div className="font-serif-display mt-1 text-2xl font-semibold text-[#701735] tabular-nums">
+              <div className="font-serif-display mt-1 text-2xl font-semibold text-brand-ink tabular-nums">
                 {plan ? fmtUsd(plan.totalSellCents) : "—"}
               </div>
             </div>
-            <div className="rounded-2xl border border-[#E5E1D8] bg-white p-4 shadow-xs">
-              <div className="font-mono text-[10px] uppercase tracking-wider text-[#625B54]">
-                Top Up (Buy)
+            <div className="rounded-2xl border border-line bg-surface p-4 shadow-xs">
+              <div className="font-mono text-[11px] uppercase tracking-wider text-ink-muted">
+                Then buy
               </div>
-              <div className="font-serif-display mt-1 text-2xl font-semibold text-teal-800 tabular-nums">
+              <div className="font-serif-display mt-1 text-2xl font-semibold text-teal-800 dark:text-teal-300 tabular-nums">
                 {plan ? fmtUsd(plan.totalBuyCents) : "—"}
               </div>
             </div>
-            <div className="rounded-2xl border border-[#E5E1D8] bg-white p-4 shadow-xs">
-              <div className="font-mono text-[10px] uppercase tracking-wider text-[#625B54]">
-                Spread Saved
+            <div className="rounded-2xl border border-line bg-surface p-4 shadow-xs">
+              <div className="font-mono text-[11px] uppercase tracking-wider text-ink-muted">
+                Saved vs market
               </div>
-              <div className="font-serif-display mt-1 text-2xl font-semibold text-amber-800 tabular-nums">
+              <div className="font-serif-display mt-1 text-2xl font-semibold text-amber-800 dark:text-amber-300 tabular-nums">
                 {plan ? `$${plan.estimatedSavingsUsd.toFixed(2)}` : "—"}
               </div>
             </div>
           </div>
 
           {error && (
-            <div className="rounded-2xl border border-rose-200 bg-rose-50 p-3 text-xs text-rose-900">
+            <div role="alert" className="rounded-2xl border border-rose-200 dark:border-rose-800 bg-rose-50 dark:bg-rose-950/40 p-3 text-xs text-rose-900 dark:text-rose-200">
               {error}
             </div>
           )}
 
-          <div className="rounded-2xl border border-[#E5E1D8] bg-white p-5 shadow-xs">
+          <div className="rounded-2xl border border-line bg-surface p-5 shadow-xs">
             <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2 font-serif-display text-lg font-semibold text-[#171412]">
-                <ArrowRightLeft className="h-4 w-4 text-[#701735]" />
-                Deterministic Sell-First Sequence
+              <div className="flex items-center gap-2 font-serif-display text-lg font-semibold text-ink">
+                <ArrowRightLeft aria-hidden className="h-4 w-4 text-brand-ink" />
+                Trade plan (sells run before buys)
               </div>
               {plan && (
-                <span className="rounded-full bg-[#F9EFF2] px-3 py-0.5 font-mono text-[10px] font-semibold text-[#701735]">
-                  {plan.status}
+                <span className="rounded-full bg-brand-soft px-3 py-0.5 text-xs font-semibold text-brand-ink">
+                  {plan.status === "REBALANCE_READY" ? "Ready to sign" : "Already balanced"}
                 </span>
               )}
             </div>
@@ -421,56 +471,61 @@ export default function RebalancePage() {
                 : plan?.legs.map((leg, i) => (
                     <div
                       key={leg.economicAssetId}
-                      className="rounded-2xl border border-[#E5E1D8] bg-[#FAF8F4]/70 p-4"
+                      className="rounded-2xl border border-line bg-paper/70 p-4"
                     >
                       <div className="flex flex-wrap items-center justify-between gap-2">
                         <div className="flex items-center gap-2.5">
-                          <span className="flex h-6 w-6 items-center justify-center rounded-full bg-white font-mono text-[11px] font-semibold text-[#701735] ring-1 ring-[#EAD2DA]">
+                          <span className="flex h-6 w-6 items-center justify-center rounded-full bg-surface font-mono text-xs font-semibold text-brand-ink ring-1 ring-brand-border">
                             {i + 1}
                           </span>
                           <div>
                             <div className="flex items-center gap-2 font-mono text-sm">
-                              <span className="font-semibold text-[#171412]">{leg.symbol}</span>
-                              <span className="text-xs text-[#625B54]">
+                              <span className="font-semibold text-ink">{leg.symbol}</span>
+                              <span className="text-xs text-ink-muted">
                                 {leg.currentWeightPct.toFixed(1)}% → {leg.targetWeightPct.toFixed(1)}%
                               </span>
                               <span
                                 className={`text-xs font-semibold ${
-                                  leg.weightDriftPct > 0 ? "text-[#701735]" : "text-teal-800"
+                                  leg.weightDriftPct > 0 ? "text-brand-ink" : "text-teal-800 dark:text-teal-300"
                                 }`}
                               >
                                 ({leg.weightDriftPct >= 0 ? "+" : ""}
                                 {leg.weightDriftPct.toFixed(1)}%)
                               </span>
                             </div>
-                            <div className="font-mono text-[11px] text-[#625B54] tabular-nums">
+                            <div className="font-mono text-xs text-ink-muted tabular-nums">
                               Holding {fmtUsd(leg.currentUsdCents)} · Target{" "}
                               {fmtUsd(leg.targetUsdCents)}
                               {leg.driftBps !== null
-                                ? ` · Live spread ${leg.driftBps.toFixed(1)} bps`
+                                ? ` · Price ${leg.driftBps >= 0 ? "+" : ""}${(leg.driftBps / 100).toFixed(2)}% vs market`
                                 : ""}
                             </div>
                           </div>
                         </div>
 
                         <span
-                          className={`rounded-full border px-2.5 py-1 font-mono text-[10px] font-semibold ${
+                          className={`rounded-full border px-2.5 py-1 text-xs font-semibold ${
                             leg.action.includes("CEFI_LIMIT")
-                              ? "border-amber-200 bg-amber-50 text-amber-900"
+                              ? "border-amber-200 dark:border-amber-800 bg-amber-50 dark:bg-amber-950/40 text-amber-900 dark:text-amber-200"
                               : leg.action.includes("DEFI_MARKET")
-                                ? "border-teal-200 bg-teal-50 text-teal-900"
-                                : "border-[#E5E1D8] bg-white text-[#625B54]"
+                                ? "border-teal-200 dark:border-teal-800 bg-teal-50 dark:bg-teal-950/40 text-teal-900 dark:text-teal-200"
+                                : "border-line bg-surface text-ink-muted"
                           }`}
                         >
-                          {leg.action}
+                          {ACTION_LABELS[leg.action] ?? leg.action}
                         </span>
                       </div>
 
-                      <p className="mt-2 text-xs text-[#625B54]">{leg.reasonMessage}</p>
+                      <p className="mt-2 text-xs text-ink-muted">
+                        {plainRebalanceSummary(leg, driftThresholdPct)}
+                      </p>
 
-                      {leg.targetAssetId && leg.orderType && (
-                        <div className="mt-2 flex flex-wrap gap-2 rounded-xl border border-[#E5E1D8] bg-white px-3 py-1.5 font-mono text-[11px] text-[#625B54]">
-                          <span className="font-semibold text-[#171412]">
+                      <details className="mt-2 rounded-xl border border-line bg-surface px-3 py-1.5 text-xs text-ink-muted">
+                          <summary className="cursor-pointer">Technical details</summary>
+                          <p className="mt-1">{leg.reasonMessage}</p>
+                          {leg.targetAssetId && leg.orderType && (
+                          <div className="mt-1 flex flex-wrap gap-2 font-mono">
+                          <span className="font-semibold text-ink">
                             {leg.side?.toUpperCase()} {leg.targetVenue?.toUpperCase()}{" "}
                             {leg.orderType.toUpperCase()}
                           </span>
@@ -478,54 +533,60 @@ export default function RebalancePage() {
                             qty={leg.orderQty} ({leg.qtyUnit})
                           </span>
                           {leg.limitPrice && (
-                            <span className="text-amber-800">limit=${leg.limitPrice}</span>
+                            <span className="text-amber-800 dark:text-amber-300">limit=${leg.limitPrice}</span>
                           )}
-                        </div>
-                      )}
+                          <span>{leg.action}</span>
+                          </div>
+                          )}
+                        </details>
                     </div>
                   ))}
             </div>
 
             {plan && (
-              <div className="mt-5 space-y-3 border-t border-[#E5E1D8] pt-4">
-                <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-[#E5E1D8] bg-[#FAF8F4] px-3.5 py-2.5 font-mono text-[11px] text-[#625B54]">
+              <div className="mt-5 space-y-3 border-t border-line pt-4">
+                <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-line bg-paper px-3.5 py-2.5 font-mono text-xs text-ink-muted">
                   <span className="flex items-center gap-1.5">
-                    <ShieldCheck className="h-3.5 w-3.5 text-[#701735]" />
+                    <ShieldCheck className="h-3.5 w-3.5 text-brand-ink" />
                     plan_hash: {plan.planHash.slice(0, 24)}…
                   </span>
-                  <span>Zero margin · Sells execute before buys</span>
+                  <span>No borrowing · sells run before buys</span>
                 </div>
 
                 <div className="flex flex-wrap items-center justify-between gap-3">
-                  <span className="inline-flex items-center gap-1.5 font-mono text-[11px] text-[#625B54]">
-                    <Lock className="h-3.5 w-3.5 text-[#701735]" />
-                    Browser P-256 Signer: {vault?.fingerprint ?? "…"}
+                  <span className="inline-flex items-center gap-1.5 font-mono text-xs text-ink-muted">
+                    <Lock aria-hidden className="h-3.5 w-3.5 text-brand-ink" />
+                    Signing key: {vault?.fingerprint ?? "…"}
                   </span>
                   <div className="flex flex-wrap items-center gap-2">
                     <button
+                      type="button"
                       onClick={handleSignRebalance}
                       disabled={signing || !vault}
-                      className="inline-flex items-center gap-2 rounded-full bg-[#701735] px-5 py-2 text-xs font-medium text-white shadow-xs transition hover:bg-[#581028] disabled:opacity-40"
+                      className="inline-flex items-center gap-2 rounded-full bg-brand px-5 py-2 text-xs font-medium text-white shadow-xs transition hover:bg-brand-hover disabled:opacity-40"
                     >
                       <KeyRound className="h-3.5 w-3.5" />
-                      {signing ? "Stamping P-256…" : "Sign Rebalance Plan (P-256)"}
+                      {signing ? "Signing…" : "Sign rebalance plan"}
                     </button>
                     {signedStamp && (
                       <button
+                        type="button"
                         onClick={downloadSignedRebalance}
-                        className="inline-flex items-center gap-1.5 rounded-full border border-[#EAD2DA] bg-[#F9EFF2] px-4 py-2 text-xs font-semibold text-[#701735] hover:bg-[#F3DFE6]"
+                        className="inline-flex items-center gap-1.5 rounded-full border border-brand-border bg-brand-soft px-4 py-2 text-xs font-semibold text-brand-ink hover:bg-brand-soft-hover"
                       >
                         <Download className="h-3.5 w-3.5" />
-                        Download Signed Statement
+                        Download signed plan
                       </button>
                     )}
                   </div>
                 </div>
 
                 {signedStamp && (
-                  <div className="rounded-xl border border-teal-200 bg-teal-50 px-3.5 py-2.5 font-mono text-[11px] text-teal-900">
-                    ✓ Locally stamped (SIGNATURE_SCHEME_TK_API_P256): {signedStamp.slice(0, 28)}…
-                    {signedStamp.slice(-12)}
+                  <div role="status" className="rounded-xl border border-teal-200 dark:border-teal-800 bg-teal-50 dark:bg-teal-950/40 px-3.5 py-2.5 text-xs text-teal-900 dark:text-teal-200">
+                    ✓ Signed in your browser.{" "}
+                    <span className="font-mono">
+                      {signedStamp.slice(0, 20)}…{signedStamp.slice(-8)}
+                    </span>
                   </div>
                 )}
               </div>

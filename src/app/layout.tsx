@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import { Fraunces, Inter, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
-import { LiveSpreadTicker } from "@/components/LiveSpreadTicker";
 import { TopNav } from "@/components/TopNav";
 
 const inter = Inter({
@@ -54,9 +53,8 @@ export default function RootLayout({
       lang="en"
       className={`${inter.variable} ${fraunces.variable} ${jetbrainsMono.variable}`}
     >
-      <body className="min-h-screen font-sans antialiased selection:bg-[#F9EFF2] selection:text-[#701735]">
+      <body className="min-h-screen font-sans antialiased selection:bg-brand-soft selection:text-brand-ink">
         <TopNav />
-        <LiveSpreadTicker />
         <main className="mx-auto max-w-7xl px-4 pb-24 pt-7 sm:px-6 lg:px-8">
           {children}
         </main>

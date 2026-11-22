@@ -1,6 +1,7 @@
 @import "tailwindcss";
 
 :root {
+  color-scheme: light dark;
   --bg-canvas: #f6f4ef;
   --bg-surface: #ffffff;
   --bg-paper: #faf8f4;
@@ -13,6 +14,57 @@
   --brand-border: #ead2da;
   --accent-emerald: #0f766e;
   --accent-amber: #b45309;
+  --brand-soft-hover: #f3dfe6;
+  --border-strong: #d8d1c5;
+  --track: #ece8df;
+  --skeleton-base: #ede9e0;
+  /* Brand as text/border; equals --brand in light, lifts to a readable pink on dark */
+  --brand-ink: #701735;
+  --spark-up: #0f766e;
+  --spark-down: #9f1239;
+  --spark-warn: #b45309;
+}
+
+/* Dark theme follows the OS setting; every token flips, components stay unchanged */
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg-canvas: #141110;
+    --bg-surface: #1c1816;
+    --bg-paper: #221d1a;
+    --border-subtle: #37302b;
+    --border-strong: #4b423b;
+    --track: #2f2925;
+    --skeleton-base: #27211e;
+    --ink-primary: #f2ede6;
+    --ink-muted: #b0a69b;
+    --brand: #8c1f44;
+    --brand-hover: #a3294f;
+    --brand-ink: #eea6bd;
+    --brand-soft: #351922;
+    --brand-soft-hover: #45202c;
+    --brand-border: #5e2b3c;
+    --spark-up: #2dd4bf;
+    --spark-down: #fb7185;
+    --spark-warn: #fbbf24;
+  }
+}
+
+/* Expose the palette as Tailwind utilities: bg-brand, text-ink-muted, border-line, … */
+@theme inline {
+  --color-canvas: var(--bg-canvas);
+  --color-paper: var(--bg-paper);
+  --color-surface: var(--bg-surface);
+  --color-line: var(--border-subtle);
+  --color-line-strong: var(--border-strong);
+  --color-track: var(--track);
+  --color-ink: var(--ink-primary);
+  --color-ink-muted: var(--ink-muted);
+  --color-brand: var(--brand);
+  --color-brand-hover: var(--brand-hover);
+  --color-brand-soft: var(--brand-soft);
+  --color-brand-soft-hover: var(--brand-soft-hover);
+  --color-brand-border: var(--brand-border);
+  --color-brand-ink: var(--brand-ink);
 }
 
 body {
@@ -20,6 +72,18 @@ body {
   color: var(--ink-primary);
   font-feature-settings: "cv02", "cv03", "cv04", "cv11";
   -webkit-font-smoothing: antialiased;
+}
+
+/* Unlayered, so it wins over Tailwind's `outline-none` utilities for keyboard users only */
+:focus-visible {
+  outline: 2px solid var(--brand-ink);
+  outline-offset: 2px;
+}
+
+/* Right-edge fade hints that a horizontal row scrolls */
+.scroll-fade-x {
+  mask-image: linear-gradient(to right, black 85%, transparent 100%);
+  -webkit-mask-image: linear-gradient(to right, black 85%, transparent 100%);
 }
 
 .font-serif-display {
@@ -54,7 +118,12 @@ body {
 }
 
 .skeleton {
-  background: linear-gradient(90deg, #ede9e0 25%, #f6f4ef 50%, #ede9e0 75%);
+  background: linear-gradient(
+    90deg,
+    var(--skeleton-base) 25%,
+    var(--bg-canvas) 50%,
+    var(--skeleton-base) 75%
+  );
   background-size: 200% 100%;
   animation: shimmer 1.4s ease-in-out infinite;
 }
@@ -65,8 +134,7 @@ body {
   appearance: none;
   height: 6px;
   border-radius: 9999px;
-  background: #e5e1d8;
-  outline: none;
+  background: var(--border-subtle);
 }
 
 .allot-slider::-webkit-slider-thumb {
@@ -75,8 +143,8 @@ body {
   width: 18px;
   height: 18px;
   border-radius: 9999px;
-  background: #701735;
-  border: 2.5px solid #ffffff;
+  background: var(--brand);
+  border: 2.5px solid var(--bg-surface);
   box-shadow: 0 1px 4px rgba(112, 23, 53, 0.35);
   cursor: pointer;
   transition: transform 0.15s ease, box-shadow 0.15s ease;
@@ -91,8 +159,8 @@ body {
   width: 18px;
   height: 18px;
   border-radius: 9999px;
-  background: #701735;
-  border: 2.5px solid #ffffff;
+  background: var(--brand);
+  border: 2.5px solid var(--bg-surface);
   box-shadow: 0 1px 4px rgba(112, 23, 53, 0.35);
   cursor: pointer;
 }
