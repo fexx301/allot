@@ -16,15 +16,19 @@ Millions of remote engineers, designers, and contractors outside the U.S. alread
 
 ## 60-Second Judge Path
 
-1. **Open Payday Studio (`/`)** — zero login required. Immediately loads **136 live tokenized U.S. stocks** from `GET /v1/gateway/assets?asset_class=stock` (including 14 dual-venue CLOB flagships: `AAPLC`, `NVDAC`, `MSFTC`, `AMZNC`, `GOOGLC`, `METAC`, `TSLAC`, `PLTRC`, and pre-IPO **`SPCXC` SpaceX**) plus live Market Data prices and live `POST /v1/gateway/quotes`.
+1. **Open Payday Studio (`/`)** — zero login required. Immediately loads **136 live tokenized U.S. stocks** from `GET /v1/gateway/assets?asset_class=stock` (including 14 dual-venue CLOB flagships: `AAPLC`, `NVDAC`, `MSFTC`, `AMZNC`, `GOOGLC`, `METAC`, `TSLAC`, `PLTRC`, and pre-IPO **`SPCXC` SpaceX**) plus live Market Data prices and live `POST /v1/gateway/quotes`. The UI speaks plain language (`0.25%`, "Limit order", "Buying now"); click **"Technical details"** on the *Live Payday Execution Plan* card to reveal the raw engine codes, venues, order quantities and `economic_asset_id`s quoted below.
 2. **Test the 3 live scenarios (top cards):**
-   - **$3,500 Remote Salary (`25 bps` cap):** Watch live quotes compare against live Market Data prices. Any stock whose spread exceeds 25 bps triggers **`PRICE_DRIFT_GUARDED`** and automatically switches via True Markets' **`economic_asset_id`** from the DeFi market listing to the paired **`cefi` CLOB `limit` order** (`qty_unit: "base"`, tick-quantized limit price) with estimated dollar savings.
-   - **$850 Freelance Invoice (`$1,000` rent floor):** Triggers **`CASH_FLOOR_PROTECTED`** — 0 orders placed, 100% kept liquid in USDC.
-   - **$32 Micro-Payout (`55 bps` cap):** Triggers **`BELOW_MIN_NOTIONAL`** carryover on the 4% leg ($1.28) while allowing tight-spread legs to route as `DEFI MARKET`.
-3. **Test Client-Side P-256 Signer Refusal:** Toggle **"Test Server Tamper Refusal"** — Allot simulates a compromised server lowering your Cash Floor; the browser signer detects the rule violation and refuses to sign (`SIGNER_REQUIRED`).
-4. **Sign Locally & Inspect Receipt (`/receipt/[id]`):** Click **"Sign Locally (P-256) & Mint Preview Receipt"** to stamp the canonical SHA-256 `plan_hash` with your browser's ECDSA P-256 key (`SIGNATURE_SCHEME_TK_API_P256`) and inspect the exportable Best-Execution Payday Statement.
-5. **Inspect Live Drift Rebalancing (`/rebalance`):** Test a post-earnings NVIDIA rally scenario — Allot trims overweight shares first so USDC proceeds fund underweight buys, skips minor noise inside your ±3% no-churn band, and routes wide-spread legs to CeFi CLOB limit orders.
-6. **Provision a Real Gateway Wallet & Shareable Paylink (`/pay/[handle]` & `/orders`):** Click **"Create Non-Custodial Wallet"** to call live `POST /v1/account/organizations/{id}/users` with your browser's compressed P-256 public key, get real Solana + Base USDC deposit addresses, share `/pay/[handle]`, modify (`PATCH`) or cancel resting CeFi CLOB limit orders, sell holdings back to USDC, and withdraw protected USDC via `POST /v1/gateway/transfers`.
+   - **$3,500 Remote Salary** (*Max price above market* = `0.25%`, i.e. 25 bps): each stock card shows "$X to invest · ≈ N shares" with *Market* vs *Your price*. Any stock whose live quote is more than 0.25% above market gets a **"Limit order ≤ $…"** badge: the engine raised **`PRICE_DRIFT_GUARDED`** and switched via True Markets' **`economic_asset_id`** from the DeFi market listing to the paired **`cefi` CLOB `limit` order** (`qty_unit: "base"`, tick-quantized limit price). Stocks inside the limit show **"Buying now"** (`DEFI MARKET`). Estimated savings appear as "Est. $… spread saved".
+   - **$850 Freelance Invoice** ($1,000 *Cash to always keep*): triggers **`CASH_FLOOR_PROTECTED`**. The stub shows **"Floor Locked"**, every stock shows **"Held · Cash floor"**, the sticky bar reads *"Below your cash floor. Nothing will be bought."* and 0 orders are placed.
+   - **$32 Micro-Payout** (`0.55%` limit): the 4% SpaceX slice ($1.28) shows **"Next payday"** (**`BELOW_MIN_NOTIONAL`** carryover) while the other legs still route.
+3. **Try to break the safety checks:** on the *Only you can approve this* card, open **"Demo: try to break the safety checks"**.
+   - Tick **"Server tampers with my cash floor"**: Allot simulates a compromised server lowering your cash floor; the browser re-checks the plan against your rule, shows *"Blocked: the plan doesn't match your rules"* (`SIGNER_REQUIRED`) and disables signing. The sticky bar links to the reason.
+   - Tick **"Price jumps right before signing"**, then click **"Sign (price-jump test)"**: the prepared quote comes back above your limit, the client-side `verifyPreparedOrderQuote()` gate refuses before any P-256 signature is produced, and a three-step panel shows *Price you saw → Price at order time → Your money is safe*.
+4. **Sign & inspect the receipt (`/receipt/[id]`):** untick the demos and click **"Sign & get receipt"** in the sticky bar at the bottom of the screen. Your browser stamps the canonical SHA-256 `plan_hash` with its ECDSA P-256 key (`SIGNATURE_SCHEME_TK_API_P256`) and opens a **Payday Receipt** labelled *"Preview · no money moved"*, with plan digest, signer key, stamp proof and a per-stock table; **"Download receipt (JSON)"** exports it. All receipts are listed at **`/receipts`**.
+5. **Rebalancer (`/rebalance`):** pick **"NVIDIA rallied 40%"**. Allot sells the overweight stock first so the USDC funds underweight buys (*Trade plan (sells run before buys)*), marks holdings inside your ±3% range **"On target · skip"**, and routes legs priced above your limit to **"Limit sell" / "Limit buy"** CeFi CLOB orders. **"Use my real holdings"** loads live `AAPLC`/`NVDAC` balances; **"Sign rebalance plan"** stamps it with P-256.
+6. **Real wallet, Paylink & Holdings (`/pay/[handle]` & `/orders`):** click **"Create Wallet"** on Payday Studio to call live `POST /v1/account/organizations/{id}/users` with your browser's compressed P-256 public key and get real Solana + Base USDC deposit addresses. Share **`/pay/[handle]`** (QR, **Copy** address, live *Current balance*). On **Holdings** (`/orders`): **"Update price"** (`PATCH`) or **"Cancel order"** on resting CeFi CLOB limit orders, **"Sell to USDC"**, and **"Withdraw cash" → "Sign & send USDC"** via `POST /v1/gateway/transfers`. Without your own wallet, Holdings shows the funded mainnet demo wallet read-only.
+
+> Theme: the top-right button cycles **System / Light / Dark**. The UI is keyboard-accessible (visible focus, labelled controls, Escape closes dialogs).
 
 ---
 
@@ -49,7 +53,7 @@ cp .env.example .env.local
 # Point TM_KEY_FILE in .env.local to your downloaded True Markets Org API Key JSON
 # (or set TM_ORG_KEY_JSON for cloud deployment in a non-US/UK region such as fra1 / ams)
 
-npm test          # 6 unit tests: integer-cent math, refusals, CLOB routing, P-256 tamper checks
+npm test          # 16 unit tests: integer-cent math, refusals, CLOB routing, rebalancer, P-256 tamper checks
 npm run typecheck # strict TypeScript check
 npm run dev       # http://localhost:3000
 ```
@@ -73,5 +77,5 @@ See **[GATEWAY-NOTES.md](GATEWAY-NOTES.md)** for our verified production enginee
 ## Evidence & Data Mode Labels
 
 True Markets Gateway operates live on-chain with no public sandbox (`docs.truemarkets.co/llms.txt`). Allot labels every screen and receipt explicitly:
-- **`LIVE QUOTES · PREVIEW MODE`**: Real live True Markets catalog (`136` stocks), live Market Data prices, live `POST /v1/gateway/quotes`, and real browser ECDSA P-256 signing — zero funds moved until you fund a wallet.
-- **`LIVE GATEWAY`**: Real `POST /v1/gateway/orders` + browser P-256 `/execute` on a funded True Markets Gateway user wallet.
+- **Preview** (Payday Studio badge *"Live True Markets Quotes · Preview Mode"*; receipts *"Preview · no money moved"*; engine mode `LIVE_QUOTES_PREVIEW`): real live True Markets catalog (`136` stocks), live Market Data prices, live `POST /v1/gateway/quotes`, and real browser ECDSA P-256 signing. Zero funds move until you fund a wallet.
+- **Real trade** (Payday Studio badge *"Live Non-Custodial Wallet"* and the **"Invest for real"** button once a wallet is connected; receipts *"Real trade · verified on-chain"*; engine mode `LIVE_GATEWAY`): real `POST /v1/gateway/orders` + browser P-256 `/execute` on a funded True Markets Gateway user wallet.
