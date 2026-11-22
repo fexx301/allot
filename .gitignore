@@ -9,5 +9,6 @@ coverage/
 *org-key*.json
 *signer-key*.json
 .data/
+.vercel/
 tsconfig.tsbuildinfo
 .DS_Store
