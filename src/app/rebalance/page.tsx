@@ -1,8 +1,23 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { ArrowRightLeft, CheckCircle2, RefreshCw, Scale, ShieldCheck } from "lucide-react";
+import {
+  ArrowRightLeft,
+  CheckCircle2,
+  Download,
+  KeyRound,
+  Lock,
+  RefreshCw,
+  Scale,
+  ShieldCheck,
+  Wallet,
+} from "lucide-react";
 import type { CompiledRebalancePlan } from "@/lib/allot/rebalancer";
+import {
+  loadOrCreateBrowserVault,
+  stampGatewayPayload,
+  type LocalP256SignerVault,
+} from "@/lib/allot/signer";
 
 interface HoldingRow {
   symbol: string;
@@ -55,7 +70,101 @@ export default function RebalancePage() {
   const [maxSpreadBps, setMaxSpreadBps] = useState(25);
   const [plan, setPlan] = useState<CompiledRebalancePlan | null>(null);
   const [loading, setLoading] = useState(false);
+  const [loadingLiveWallet, setLoadingLiveWallet] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [vault, setVault] = useState<LocalP256SignerVault | null>(null);
+  const [signedStamp, setSignedStamp] = useState<string | null>(null);
+  const [signing, setSigning] = useState(false);
+
+  useEffect(() => {
+    try {
+      setVault(loadOrCreateBrowserVault());
+    } catch {
+      // ignore
+    }
+  }, []);
+
+  async function loadLiveBaseHoldings() {
+    setLoadingLiveWallet(true);
+    setError(null);
+    setSignedStamp(null);
+    try {
+      const saved = typeof window !== "undefined" ? window.localStorage.getItem("allot.connected.wallet.v1") : null;
+      const userId = saved ? JSON.parse(saved).userId : undefined;
+      const qs = userId ? `?userId=${encodeURIComponent(userId)}` : "";
+      const res = await fetch(`/api/wallet${qs}`);
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Failed to load wallet");
+      const stockBalances = (data.balances || []).filter(
+        (b: { symbol: string; available: string }) =>
+          b.symbol.toUpperCase() !== "USDC" && Number(b.available) > 0,
+      );
+      if (stockBalances.length < 2) {
+        throw new Error("Need at least 2 non-USDC stock balances to compute portfolio drift.");
+      }
+      const equalWeight = Math.floor(100 / stockBalances.length);
+      let rem = 100 - equalWeight * stockBalances.length;
+      const rows: HoldingRow[] = stockBalances.map(
+        (b: { symbol: string; name?: string; available: string }) => {
+          const bonus = rem > 0 ? 1 : 0;
+          if (rem > 0) rem -= 1;
+          return {
+            symbol: b.symbol,
+            name: b.name || b.symbol,
+            qty: Number(b.available),
+            targetWeightPct: equalWeight + bonus,
+          };
+        },
+      );
+      setPresetId("live-base-wallet");
+      setHoldings(rows);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Could not load live Base holdings");
+    } finally {
+      setLoadingLiveWallet(false);
+    }
+  }
+
+  async function handleSignRebalance() {
+    if (!plan || !vault) return;
+    setSigning(true);
+    setError(null);
+    try {
+      const stamp = await stampGatewayPayload(
+        vault,
+        JSON.stringify({
+          planVersion: plan.planVersion,
+          planHash: plan.planHash,
+          totalSellCents: plan.totalSellCents,
+          totalBuyCents: plan.totalBuyCents,
+        }),
+      );
+      setSignedStamp(stamp);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Signing failed");
+    } finally {
+      setSigning(false);
+    }
+  }
+
+  function downloadSignedRebalance() {
+    if (!plan || !signedStamp || !vault) return;
+    const payload = {
+      type: "allot.rebalance.statement.v1",
+      signedAt: new Date().toISOString(),
+      signerPublicKey: vault.publicKeyCompressedHex,
+      scheme: "SIGNATURE_SCHEME_TK_API_P256",
+      stamp: signedStamp,
+      plan,
+    };
+    const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `allot-rebalance-${plan.planHash.slice(0, 10)}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+  }
 
   const compile = useCallback(async () => {
     setLoading(true);
@@ -125,11 +234,14 @@ export default function RebalancePage() {
             </button>
           </div>
 
-          <div className="mt-5 grid grid-cols-1 gap-3 md:grid-cols-2">
+          <div className="mt-5 grid grid-cols-1 gap-3 md:grid-cols-3">
             {PRESETS.map((p) => (
               <button
                 key={p.id}
-                onClick={() => selectPreset(p.id)}
+                onClick={() => {
+                  setSignedStamp(null);
+                  selectPreset(p.id);
+                }}
                 className={`rounded-2xl border p-4 text-left transition ${
                   presetId === p.id
                     ? "border-[#701735] bg-[#FAF8F4] ring-1 ring-[#701735]"
@@ -145,6 +257,30 @@ export default function RebalancePage() {
                 <p className="mt-1 text-xs text-[#625B54]">{p.subtitle}</p>
               </button>
             ))}
+
+            <button
+              onClick={loadLiveBaseHoldings}
+              disabled={loadingLiveWallet}
+              className={`rounded-2xl border p-4 text-left transition ${
+                presetId === "live-base-wallet"
+                  ? "border-[#701735] bg-[#F9EFF2] ring-1 ring-[#701735]"
+                  : "border-[#EAD2DA] bg-[#F9EFF2]/50 hover:border-[#701735]"
+              }`}
+            >
+              <div className="flex items-center justify-between">
+                <span className="inline-flex items-center gap-1.5 font-serif-display text-base font-semibold text-[#701735]">
+                  <Wallet className="h-4 w-4" />
+                  {loadingLiveWallet ? "Loading Live Holdings…" : "Load Live Base Holdings"}
+                </span>
+                {presetId === "live-base-wallet" && (
+                  <CheckCircle2 className="h-4 w-4 text-[#701735]" />
+                )}
+              </div>
+              <p className="mt-1 text-xs text-[#625B54]">
+                Pulls real AAPLC &amp; NVDAC share balances from True Markets Gateway to compute
+                actual live portfolio drift.
+              </p>
+            </button>
           </div>
         </div>
       </section>
@@ -352,12 +488,47 @@ export default function RebalancePage() {
             </div>
 
             {plan && (
-              <div className="mt-4 flex items-center justify-between rounded-xl border border-[#E5E1D8] bg-[#FAF8F4] px-3.5 py-2.5 font-mono text-[11px] text-[#625B54]">
-                <span className="flex items-center gap-1.5">
-                  <ShieldCheck className="h-3.5 w-3.5 text-[#701735]" />
-                  plan_hash: {plan.planHash.slice(0, 24)}…
-                </span>
-                <span>Zero margin · Sells execute before buys</span>
+              <div className="mt-5 space-y-3 border-t border-[#E5E1D8] pt-4">
+                <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-[#E5E1D8] bg-[#FAF8F4] px-3.5 py-2.5 font-mono text-[11px] text-[#625B54]">
+                  <span className="flex items-center gap-1.5">
+                    <ShieldCheck className="h-3.5 w-3.5 text-[#701735]" />
+                    plan_hash: {plan.planHash.slice(0, 24)}…
+                  </span>
+                  <span>Zero margin · Sells execute before buys</span>
+                </div>
+
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                  <span className="inline-flex items-center gap-1.5 font-mono text-[11px] text-[#625B54]">
+                    <Lock className="h-3.5 w-3.5 text-[#701735]" />
+                    Browser P-256 Signer: {vault?.fingerprint ?? "…"}
+                  </span>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <button
+                      onClick={handleSignRebalance}
+                      disabled={signing || !vault}
+                      className="inline-flex items-center gap-2 rounded-full bg-[#701735] px-5 py-2 text-xs font-medium text-white shadow-xs transition hover:bg-[#581028] disabled:opacity-40"
+                    >
+                      <KeyRound className="h-3.5 w-3.5" />
+                      {signing ? "Stamping P-256…" : "Sign Rebalance Plan (P-256)"}
+                    </button>
+                    {signedStamp && (
+                      <button
+                        onClick={downloadSignedRebalance}
+                        className="inline-flex items-center gap-1.5 rounded-full border border-[#EAD2DA] bg-[#F9EFF2] px-4 py-2 text-xs font-semibold text-[#701735] hover:bg-[#F3DFE6]"
+                      >
+                        <Download className="h-3.5 w-3.5" />
+                        Download Signed Statement
+                      </button>
+                    )}
+                  </div>
+                </div>
+
+                {signedStamp && (
+                  <div className="rounded-xl border border-teal-200 bg-teal-50 px-3.5 py-2.5 font-mono text-[11px] text-teal-900">
+                    ✓ Locally stamped (SIGNATURE_SCHEME_TK_API_P256): {signedStamp.slice(0, 28)}…
+                    {signedStamp.slice(-12)}
+                  </div>
+                )}
               </div>
             )}
           </div>

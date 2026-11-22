@@ -969,6 +969,50 @@ export function PaydayStudio() {
         </div>
       </section>
 
+      {/* 12-Month Transparent Fee Comparison Strip (Legacy FX/Wire vs Allot 0.20% Gateway) */}
+      {(() => {
+        const monthlyInvestUsd = Math.max(0, totalInvestedCents / 100);
+        const annualInflowUsd = monthlyInvestUsd * 12;
+        // Legacy global worker path: ~3.8% FX off-ramp/broker spread + $25 international wire per paycheck
+        const legacyAnnualFeesUsd = annualInflowUsd > 0 ? annualInflowUsd * 0.038 + 25 * 12 : 0;
+        // Verified live True Markets Gateway fee (0.20% observed on mainnet Base fills, $0 gas, T+0)
+        const allotAnnualFeesUsd = annualInflowUsd * 0.002;
+        const annualFeeSavingsUsd = Math.max(0, legacyAnnualFeesUsd - allotAnnualFeesUsd);
+
+        if (annualInflowUsd <= 0) return null;
+        return (
+          <section className="rounded-2xl border border-[#E5E1D8] bg-white px-5 py-4 shadow-xs">
+            <div className="flex flex-wrap items-center justify-between gap-4">
+              <div className="flex items-center gap-3">
+                <span className="rounded-full bg-[#F9EFF2] px-3 py-1 font-mono text-[10px] font-semibold uppercase tracking-wider text-[#701735]">
+                  12-Month Fee Comparison
+                </span>
+                <p className="text-xs text-[#625B54]">
+                  At{" "}
+                  <strong className="font-mono text-[#171412]">
+                    ${monthlyInvestUsd.toLocaleString("en-US", { maximumFractionDigits: 0 })}/mo
+                  </strong>{" "}
+                  invested (${annualInflowUsd.toLocaleString("en-US", { maximumFractionDigits: 0 })}/yr):
+                  legacy FX off-ramp + wire (~3.8% + $25/mo, T+3) costs{" "}
+                  <span className="font-mono text-rose-800 line-through">
+                    ${legacyAnnualFeesUsd.toLocaleString("en-US", { maximumFractionDigits: 0 })}/yr
+                  </span>{" "}
+                  vs Allot on True Markets (0.20% verified fee, $0 gas, T+0):{" "}
+                  <strong className="font-mono text-teal-800">
+                    ${allotAnnualFeesUsd.toLocaleString("en-US", { maximumFractionDigits: 0 })}/yr
+                  </strong>
+                  .
+                </p>
+              </div>
+              <div className="shrink-0 font-mono text-sm font-semibold text-[#701735] tabular-nums">
+                +${annualFeeSavingsUsd.toLocaleString("en-US", { maximumFractionDigits: 0 })}/yr kept
+                in U.S. stocks
+              </div>
+            </div>
+          </section>
+        );
+      })()}
+
       {catalogError && (
         <div className="rounded-2xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-900">
           Catalog error: {catalogError}

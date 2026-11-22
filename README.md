@@ -66,6 +66,10 @@ Executed live on True Markets Gateway (`user_id: 98f6006a-b96a-4b77-a9e8-69c1c85
 
 Inspect this statement directly inside the app at `/receipt/rcpt_live_base_20261122`.
 
+## Ecosystem Give-Back: True Markets Gateway Field Notes
+
+See **[GATEWAY-NOTES.md](GATEWAY-NOTES.md)** for our verified production engineering notes (9-bucket CeFi increment schedule, `economic_asset_id` 122 DeFi vs 14 CeFi CLOB limit split, permissionless DeFi vs `403 kyc_required` CeFi boundary, pre-sign prepared-quote TOCTOU guard, and EU `fra1` serverless routing).
+
 ## Evidence & Data Mode Labels
 
 True Markets Gateway operates live on-chain with no public sandbox (`docs.truemarkets.co/llms.txt`). Allot labels every screen and receipt explicitly:

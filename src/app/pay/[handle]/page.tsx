@@ -3,7 +3,7 @@
 import { use, useEffect, useState } from "react";
 import Link from "next/link";
 import { QRCodeSVG } from "qrcode.react";
-import { ArrowLeft, Check, Copy, RefreshCw, ShieldCheck } from "lucide-react";
+import { ArrowLeft, Check, Code2, Copy, RefreshCw, ShieldCheck } from "lucide-react";
 import type { PaylinkProfile } from "@/lib/allot/store";
 
 export default function PaylinkPage({
@@ -16,6 +16,8 @@ export default function PaylinkPage({
   const [loading, setLoading] = useState(true);
   const [network, setNetwork] = useState<"evm" | "solana">("evm");
   const [copied, setCopied] = useState(false);
+  const [embedTab, setEmbedTab] = useState<"html" | "react">("html");
+  const [embedCopied, setEmbedCopied] = useState(false);
   const [usdcBalance, setUsdcBalance] = useState<number | null>(null);
   const [checking, setChecking] = useState(false);
 
@@ -205,6 +207,57 @@ export default function PaylinkPage({
             </div>
           </div>
         </div>
+      </div>
+      {/* Embeddable Paylink Snippet — Bring U.S. Stocks Everywhere */}
+      <div className="rounded-3xl border border-[#E5E1D8] bg-white p-6 shadow-xs">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <div className="inline-flex items-center gap-1.5 text-xs font-semibold text-[#701735]">
+              <Code2 className="h-4 w-4" />
+              Embed Allot on Any Invoice, Payroll App, or DAO Treasury
+            </div>
+            <p className="mt-0.5 text-xs text-[#625B54]">
+              Drop a single button into your invoice or contractor portal so payouts route directly
+              into non-custodial U.S. stocks on True Markets Gateway.
+            </p>
+          </div>
+          <div className="flex gap-1 rounded-full border border-[#E5E1D8] bg-[#FAF8F4] p-1">
+            {(["html", "react"] as const).map((t) => (
+              <button
+                key={t}
+                onClick={() => setEmbedTab(t)}
+                className={`rounded-full px-3 py-1 font-mono text-[11px] font-medium uppercase ${
+                  embedTab === t ? "bg-[#701735] text-white" : "text-[#625B54]"
+                }`}
+              >
+                {t}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {(() => {
+          const linkUrl = `https://allot-ashen.vercel.app/pay/${profile.handle}`;
+          const snippet =
+            embedTab === "html"
+              ? `<a href="${linkUrl}" target="_blank" rel="noreferrer" style="display:inline-flex;align-items:center;gap:8px;background:#701735;color:#fff;padding:10px 18px;border-radius:999px;font-family:sans-serif;font-size:14px;font-weight:600;text-decoration:none;">Pay ${profile.displayName} in USDC → U.S. Stocks (Allot)</a>`
+              : `<AllotPayButton handle="${profile.handle}" amountUsd={${profile.defaultInvoiceUsd}} href="${linkUrl}" />`;
+          return (
+            <div className="mt-3 flex items-start justify-between gap-3 rounded-2xl border border-[#E5E1D8] bg-[#FAF8F4] p-3.5">
+              <pre className="overflow-x-auto font-mono text-[11px] text-[#171412]">{snippet}</pre>
+              <button
+                onClick={() => {
+                  navigator.clipboard.writeText(snippet);
+                  setEmbedCopied(true);
+                  setTimeout(() => setEmbedCopied(false), 1500);
+                }}
+                className="shrink-0 rounded-xl border border-[#E5E1D8] bg-white px-2.5 py-1.5 text-xs font-medium text-[#171412] hover:border-[#701735]/40"
+              >
+                {embedCopied ? "Copied!" : "Copy"}
+              </button>
+            </div>
+          );
+        })()}
       </div>
     </div>
   );
