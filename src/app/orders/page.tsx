@@ -6,12 +6,48 @@ import { loadOrCreateBrowserVault, stampGatewayPayload, type LocalP256SignerVaul
 import type { ConnectedGatewayWallet } from "@/components/WalletModal";
 import type { GatewayBalance, GatewayOrderResponse } from "@/lib/tm-gateway/types";
 
+interface PortfolioBalanceItem {
+  asset_id: string;
+  symbol: string;
+  name: string;
+  chain: string | null;
+  venue: string;
+  icon?: string;
+  available: string;
+  total: string;
+  price?: string;
+  value?: string;
+  change_24h_pct?: string;
+  cost_basis?: {
+    avg_entry_price?: string;
+    cost_usd?: string;
+    unrealized_pnl?: string;
+  };
+}
+
+interface PortfolioSummary {
+  total_usd?: string;
+  cash_usd?: string;
+  change_24h_usd?: string;
+  change_24h_pct?: string;
+  unrealized_pnl_usd?: string;
+  balances?: PortfolioBalanceItem[];
+}
+
 interface WalletApiResponse {
   userId: string;
   fetchedAt: string;
   totalUsdcAvailable: number;
   balances: GatewayBalance[];
-  orders: GatewayOrderResponse[];
+  orders: Array<
+    GatewayOrderResponse & {
+      asset_symbol?: string;
+      explorer_url?: string;
+      executed_vwap?: string;
+      fee?: string;
+    }
+  >;
+  portfolio?: PortfolioSummary | null;
   carryoverCents: Record<string, number>;
 }
 
@@ -281,11 +317,11 @@ export default function OrdersAndWalletPage() {
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="text-2xl font-semibold text-slate-900">
-            Non-Custodial Wallet &amp; Resting CLOB Orders
+            Portfolio Holdings, Wallet &amp; CLOB Orders
           </h1>
           <p className="text-sm text-stone-600">
-            Live balances, resting CeFi limit orders, and instant Cash Floor USDC transfers on True
-            Markets Gateway.
+            Live True Markets Gateway portfolio value, tokenized U.S. stock cost basis &amp; P&amp;L,
+            resting CeFi limit orders, and instant Cash Floor USDC transfers.
           </p>
         </div>
         <button
@@ -297,6 +333,68 @@ export default function OrdersAndWalletPage() {
           Sync Gateway State
         </button>
       </div>
+
+      {/* Live Portfolio Summary Strip */}
+      {data?.portfolio && (
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+          <div className="rounded-2xl border border-[#E5E4DE] bg-white p-4 shadow-xs">
+            <div className="text-[11px] font-medium uppercase tracking-wider text-stone-500">
+              Total Portfolio
+            </div>
+            <div className="mt-1 font-mono text-xl font-semibold text-slate-900 tabular-nums">
+              ${Number(data.portfolio.total_usd || 0).toFixed(2)}
+            </div>
+            {data.portfolio.change_24h_pct && (
+              <div
+                className={`mt-0.5 font-mono text-xs ${
+                  Number(data.portfolio.change_24h_pct) >= 0 ? "text-emerald-700" : "text-red-700"
+                }`}
+              >
+                {Number(data.portfolio.change_24h_pct) >= 0 ? "+" : ""}
+                {Number(data.portfolio.change_24h_pct).toFixed(2)}% (24h)
+              </div>
+            )}
+          </div>
+          <div className="rounded-2xl border border-[#E5E4DE] bg-white p-4 shadow-xs">
+            <div className="text-[11px] font-medium uppercase tracking-wider text-stone-500">
+              Tokenized U.S. Stocks
+            </div>
+            <div className="mt-1 font-mono text-xl font-semibold text-emerald-800 tabular-nums">
+              $
+              {Math.max(
+                0,
+                Number(data.portfolio.total_usd || 0) - Number(data.portfolio.cash_usd || 0),
+              ).toFixed(2)}
+            </div>
+            <div className="mt-0.5 text-[11px] text-stone-500">Live Base holdings</div>
+          </div>
+          <div className="rounded-2xl border border-[#E5E4DE] bg-white p-4 shadow-xs">
+            <div className="text-[11px] font-medium uppercase tracking-wider text-stone-500">
+              Protected Cash Floor
+            </div>
+            <div className="mt-1 font-mono text-xl font-semibold text-indigo-900 tabular-nums">
+              ${Number(data.portfolio.cash_usd || data.totalUsdcAvailable || 0).toFixed(2)}
+            </div>
+            <div className="mt-0.5 text-[11px] text-stone-500">Spendable USDC</div>
+          </div>
+          <div className="rounded-2xl border border-[#E5E4DE] bg-white p-4 shadow-xs">
+            <div className="text-[11px] font-medium uppercase tracking-wider text-stone-500">
+              Unrealized P&amp;L
+            </div>
+            <div
+              className={`mt-1 font-mono text-xl font-semibold tabular-nums ${
+                Number(data.portfolio.unrealized_pnl_usd || 0) >= 0
+                  ? "text-emerald-800"
+                  : "text-stone-700"
+              }`}
+            >
+              {Number(data.portfolio.unrealized_pnl_usd || 0) >= 0 ? "+" : ""}$
+              {Number(data.portfolio.unrealized_pnl_usd || 0).toFixed(2)}
+            </div>
+            <div className="mt-0.5 text-[11px] text-stone-500">Live mark-to-market</div>
+          </div>
+        </div>
+      )}
 
       {statusMsg && (
         <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-xs text-emerald-900">
@@ -326,33 +424,75 @@ export default function OrdersAndWalletPage() {
               </div>
             ) : (
               <div className="mt-4 divide-y divide-[#E5E4DE]">
-                {data.balances.map((b, i) => (
-                  <div key={`${b.symbol}-${b.chain}-${i}`} className="flex items-center justify-between py-3">
-                    <div>
-                      <div className="font-mono text-sm font-semibold text-slate-900">{b.symbol}</div>
-                      <div className="text-xs text-stone-500">
-                        {b.chain || b.venue || "cefi"}
+                {data.balances.map((b, i) => {
+                  const pItem = data.portfolio?.balances?.find(
+                    (pb) => pb.asset_id === b.asset_id || pb.symbol === b.symbol,
+                  );
+                  const liveValue = pItem?.value ? Number(pItem.value) : b.usd_value ? Number(b.usd_value) : null;
+                  const entryPrice = pItem?.cost_basis?.avg_entry_price
+                    ? Number(pItem.cost_basis.avg_entry_price)
+                    : null;
+                  const livePrice = pItem?.price ? Number(pItem.price) : null;
+                  const pnl = pItem?.cost_basis?.unrealized_pnl
+                    ? Number(pItem.cost_basis.unrealized_pnl)
+                    : null;
+
+                  return (
+                    <div key={`${b.symbol}-${b.chain}-${i}`} className="flex items-center justify-between gap-3 py-3.5">
+                      <div className="flex items-center gap-3">
+                        {pItem?.icon ? (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img
+                            src={pItem.icon}
+                            alt={b.symbol}
+                            className="h-8 w-8 rounded-full border border-[#E5E4DE] bg-white object-cover"
+                          />
+                        ) : (
+                          <div className="flex h-8 w-8 items-center justify-center rounded-full bg-slate-900 font-mono text-xs font-bold text-white">
+                            {b.symbol.slice(0, 2)}
+                          </div>
+                        )}
+                        <div>
+                          <div className="flex items-center gap-1.5">
+                            <span className="font-mono text-sm font-semibold text-slate-900">{b.symbol}</span>
+                            {pItem?.name && <span className="text-xs text-stone-500">{pItem.name}</span>}
+                            <span className="rounded bg-[#F7F6F2] px-1.5 py-0.5 font-mono text-[10px] text-stone-600">
+                              {b.chain || b.venue || "cefi"}
+                            </span>
+                          </div>
+                          <div className="mt-0.5 font-mono text-[11px] text-stone-500 tabular-nums">
+                            {b.available} {b.symbol}
+                            {livePrice && b.symbol !== "USDC" ? ` · Live $${livePrice.toFixed(2)}` : ""}
+                            {entryPrice ? ` · Avg Entry $${entryPrice.toFixed(2)}` : ""}
+                          </div>
+                        </div>
                       </div>
-                    </div>
-                    <div className="flex items-center gap-3 text-right font-mono tabular-nums">
-                      <div>
-                        <div className="text-sm font-semibold text-slate-900">{b.available}</div>
-                        {b.usd_value && (
-                          <div className="text-xs text-stone-500">${Number(b.usd_value).toFixed(2)}</div>
+                      <div className="flex items-center gap-3 text-right font-mono tabular-nums">
+                        <div>
+                          <div className="text-sm font-semibold text-slate-900">
+                            {liveValue !== null ? `$${liveValue.toFixed(2)}` : b.available}
+                          </div>
+                          {pnl !== null && b.symbol !== "USDC" && (
+                            <div
+                              className={`text-[11px] ${pnl >= 0 ? "text-emerald-700" : "text-stone-500"}`}
+                            >
+                              {pnl >= 0 ? "+" : ""}${pnl.toFixed(3)} P&amp;L
+                            </div>
+                          )}
+                        </div>
+                        {b.symbol.toUpperCase() !== "USDC" && b.asset_id && Number(b.available) > 0 && (
+                          <button
+                            onClick={() => handleQuickSellToUsdc(b)}
+                            disabled={submitting}
+                            className="rounded-lg border border-[#E5E4DE] bg-[#F7F6F2] px-2.5 py-1.5 font-sans text-xs font-medium text-slate-800 hover:bg-stone-200/70 disabled:opacity-40"
+                          >
+                            Sell to USDC
+                          </button>
                         )}
                       </div>
-                      {b.symbol.toUpperCase() !== "USDC" && b.asset_id && Number(b.available) > 0 && (
-                        <button
-                          onClick={() => handleQuickSellToUsdc(b)}
-                          disabled={submitting}
-                          className="rounded-lg border border-[#E5E4DE] bg-[#F7F6F2] px-2.5 py-1.5 font-sans text-xs font-medium text-slate-800 hover:bg-stone-200/70 disabled:opacity-40"
-                        >
-                          Sell to USDC
-                        </button>
-                      )}
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             )}
           </div>
@@ -377,14 +517,34 @@ export default function OrdersAndWalletPage() {
                     >
                       <div>
                         <div className="flex items-center gap-2 font-mono">
-                          <span className="font-semibold text-slate-900">{o.symbol || o.asset_id?.slice(0, 8)}</span>
+                          <span className="font-semibold text-slate-900">
+                            {o.asset_symbol || o.symbol || o.asset_id?.slice(0, 8)}
+                          </span>
                           <span className="uppercase text-stone-600">{o.type} {o.side}</span>
                           <span className="rounded bg-white px-1.5 py-0.5 text-[10px] font-semibold ring-1 ring-[#E5E4DE]">
                             {o.status}
                           </span>
                         </div>
-                        <div className="mt-1 font-mono text-[11px] text-stone-500">
-                          qty={o.executed_qty || o.qty} {o.price ? `@ $${o.price}` : ""} · id={id.slice(0, 12)}…
+                        <div className="mt-1 flex flex-wrap items-center gap-2 font-mono text-[11px] text-stone-500">
+                          <span>
+                            {o.executed_qty || o.qty} sh
+                            {o.executed_vwap
+                              ? ` @ $${Number(o.executed_vwap).toFixed(2)}`
+                              : o.price
+                                ? ` @ $${o.price}`
+                                : ""}
+                          </span>
+                          <span>· id={id.slice(0, 12)}…</span>
+                          {o.explorer_url && (
+                            <a
+                              href={o.explorer_url}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="font-medium text-emerald-700 underline hover:text-emerald-900"
+                            >
+                              BaseScan ↗
+                            </a>
+                          )}
                         </div>
                       </div>
                       {o.status === "active" && (

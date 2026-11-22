@@ -8,7 +8,7 @@ const NAV_ITEMS = [
   { href: "/", label: "Payday Studio", icon: Layers },
   { href: "/rebalance", label: "Drift Rebalancer", icon: Scale },
   { href: "/pay/demo-engineer", label: "USDC Paylink", icon: Link2 },
-  { href: "/orders", label: "Wallet & CLOB", icon: Landmark },
+  { href: "/orders", label: "Holdings & CLOB", icon: Landmark },
   { href: "/receipts", label: "Receipts", icon: FileCheck2 },
 ];
 
