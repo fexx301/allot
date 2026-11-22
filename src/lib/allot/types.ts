@@ -118,6 +118,7 @@ export interface PaydayReceipt {
   executions: Array<{
     symbol: string;
     venue: GatewayVenue;
+    chain?: string;
     orderType: "market" | "limit";
     orderId: string;
     status: string;
@@ -126,5 +127,7 @@ export interface PaydayReceipt {
     fillPrice?: number;
     benchmarkPrice?: number;
     driftBps?: number;
+    feeUsd?: number;
+    txHash?: string;
   }>;
 }

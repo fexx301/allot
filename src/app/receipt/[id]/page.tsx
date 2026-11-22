@@ -187,8 +187,31 @@ export default function ReceiptDetailPage({
                           {leg.reasonCode}
                         </span>
                       </td>
-                      <td className="py-3 text-stone-500">
-                        {exec ? `${exec.orderId} (${exec.status})` : "No order placed"}
+                      <td className="py-3 text-stone-600">
+                        {exec ? (
+                          <div className="space-y-0.5">
+                            <div>
+                              <span className="font-semibold text-slate-900">{exec.status}</span>
+                              {exec.executedQty ? ` · ${exec.executedQty} sh` : ""}
+                              {exec.feeUsd !== undefined ? ` · fee $${exec.feeUsd.toFixed(5)}` : ""}
+                            </div>
+                            <div className="text-[10px] text-stone-500">
+                              id: {exec.orderId.slice(0, 14)}…
+                            </div>
+                            {exec.txHash && (
+                              <a
+                                href={`https://basescan.org/tx/${exec.txHash}`}
+                                target="_blank"
+                                rel="noreferrer"
+                                className="inline-block text-[10px] font-medium text-emerald-700 underline hover:text-emerald-900"
+                              >
+                                BaseScan: {exec.txHash.slice(0, 10)}…{exec.txHash.slice(-6)}
+                              </a>
+                            )}
+                          </div>
+                        ) : (
+                          "No order placed"
+                        )}
                       </td>
                     </tr>
                   );

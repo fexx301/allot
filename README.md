@@ -48,6 +48,18 @@ npm run typecheck # strict TypeScript check
 npm run dev       # http://localhost:3000
 ```
 
+## Verified Live Mainnet Base Execution Proof (`2026-11-22 08:38 UTC`)
+
+Executed live on True Markets Gateway (`user_id: 98f6006a-b96a-4b77-a9e8-69c1c85c308c`) from a **$5.98 USDC** Base deposit (`$2.09` Cash Floor preserved in USDC, `$3.89` split across `AAPLC` + `NVDAC`, signed locally with ECDSA P-256 `SIGNATURE_SCHEME_TK_API_P256`, total fees `$0.00778`, zero gas paid):
+
+| Leg | Allocation | Filled Qty | Executed VWAP | Gateway Order ID | BaseScan Settlement Tx |
+|---|---|---|---|---|---|
+| **AAPLC** (Apple) | $2.14 USDC | `0.00612579` | `$349.3427` | `d700e3f9-60bf-4872-b243-528f0065819d` | [`0x2c597e…5d79b5f`](https://basescan.org/tx/0x2c597e239af7072ef5911f1c65d04e4215b018dd464ce29fd3d0b88a05d79b5f) |
+| **NVDAC** (NVIDIA) | $1.75 USDC | `0.01330083` | `$131.5707` | `b7c2f046-f1fd-48cd-8a38-04448d636a2e` | [`0x5239d3…1274c1dc`](https://basescan.org/tx/0x5239d3f08950dc16a3782b756b3a3fd23026e8f15a9d130448016a3e1274c1dc) |
+| **Protected Cash Floor** | $2.09 USDC | `2.085321 USDC` | — | Held untouched in user's Base Turnkey wallet | — |
+
+Inspect this statement directly inside the app at `/receipt/rcpt_live_base_20261122`.
+
 ## Evidence & Data Mode Labels
 
 True Markets Gateway operates live on-chain with no public sandbox (`docs.truemarkets.co/llms.txt`). Allot labels every screen and receipt explicitly:

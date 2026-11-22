@@ -111,6 +111,9 @@ export interface GatewayOrderResponse {
   executed_qty?: string;
   price?: string;
   avg_fill_price?: string;
+  executed_vwap?: string;
+  fee?: string;
+  tx_hash?: string;
   quote?: GatewayQuoteResponse;
   payloads?: GatewayOrderPayload[];
   created_at?: string;

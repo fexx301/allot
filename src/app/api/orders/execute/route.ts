@@ -55,13 +55,17 @@ export async function POST(req: NextRequest) {
             status: res.status,
             requestedUsd: item.requestedUsd,
             executedQty: res.executed_qty ?? res.qty,
-            fillPrice: res.avg_fill_price
-              ? Number(res.avg_fill_price)
-              : res.price
-                ? Number(res.price)
-                : undefined,
+            fillPrice: res.executed_vwap
+              ? Number(res.executed_vwap)
+              : res.avg_fill_price
+                ? Number(res.avg_fill_price)
+                : res.price
+                  ? Number(res.price)
+                  : undefined,
             benchmarkPrice: item.benchmarkPrice,
             driftBps: item.driftBps,
+            feeUsd: res.fee ? Number(res.fee) : undefined,
+            txHash: res.tx_hash,
           });
         } catch (err) {
           executions.push({

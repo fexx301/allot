@@ -598,6 +598,13 @@ export function PaydayStudio() {
               Open Shareable USDC Paylink
               <ArrowRight className="h-3.5 w-3.5" />
             </Link>
+            <Link
+              href="/receipt/rcpt_live_base_20261122"
+              className="inline-flex items-center justify-center gap-1.5 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-2 text-xs font-medium text-emerald-900 transition hover:bg-emerald-100"
+            >
+              <CheckCircle2 className="h-3.5 w-3.5 text-emerald-700" />
+              Verified Live Base Receipt
+            </Link>
           </div>
         </div>
 
