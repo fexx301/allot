@@ -109,3 +109,47 @@ body {
 .allot-slider-amber::-moz-range-thumb {
   background: #b45309;
 }
+
+/* Smooth GPU-composited financial tape marquee (right-to-left, pause on hover) */
+@keyframes allot-marquee {
+  0% {
+    transform: translate3d(0, 0, 0);
+  }
+  100% {
+    transform: translate3d(-50%, 0, 0);
+  }
+}
+
+.allot-marquee-viewport {
+  mask-image: linear-gradient(
+    to right,
+    transparent 0%,
+    black 3%,
+    black 97%,
+    transparent 100%
+  );
+  -webkit-mask-image: linear-gradient(
+    to right,
+    transparent 0%,
+    black 3%,
+    black 97%,
+    transparent 100%
+  );
+}
+
+.allot-marquee-track {
+  display: flex;
+  width: max-content;
+  animation: allot-marquee 65s linear infinite;
+  will-change: transform;
+}
+
+.allot-marquee-viewport:hover .allot-marquee-track {
+  animation-play-state: paused;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .allot-marquee-track {
+    animation: none;
+  }
+}

@@ -13,13 +13,46 @@ const WATCH_SYMBOLS = [
   "GOOGLC",
   "METAC",
   "PLTRC",
+  "MSTRC",
+  "MUC",
+  "SNDKC",
+  "SPYX",
+  "QQQX",
+  "COINX",
+  "HOODX",
+  "GLDX",
+  "MCDX",
+  "INTCX",
+  "GMEX",
 ];
+
+const SHORT_NAMES: Record<string, string> = {
+  AAPLC: "Apple",
+  NVDAC: "NVIDIA",
+  SPCXC: "SpaceX",
+  TSLAC: "Tesla",
+  MSFTC: "Microsoft",
+  AMZNC: "Amazon",
+  GOOGLC: "Alphabet",
+  METAC: "Meta",
+  PLTRC: "Palantir",
+  MSTRC: "Strategy",
+  MUC: "Micron",
+  SNDKC: "SanDisk",
+  SPYX: "S&P 500",
+  QQQX: "Nasdaq 100",
+  COINX: "Coinbase",
+  HOODX: "Robinhood",
+  GLDX: "Gold ETF",
+  MCDX: "McDonald's",
+  INTCX: "Intel",
+  GMEX: "GameStop",
+};
 
 interface TickerEntry {
   symbol: string;
   price: number;
   change24h?: number;
-  refMid?: number;
   updatedAt?: string;
 }
 
@@ -31,6 +64,7 @@ export function LiveSpreadTicker() {
     let closed = false;
     let ws: WebSocket | null = null;
 
+    // Seed flagship prices from /api/catalog immediately so the tape starts full in <400ms
     fetch("/api/catalog")
       .then((r) => r.json())
       .then((d) => {
@@ -58,10 +92,7 @@ export function LiveSpreadTicker() {
       ws.onopen = () => {
         if (closed || !ws) return;
         setWsState("live");
-        const topics = [
-          ...WATCH_SYMBOLS.map((s) => `price.${s}`),
-          ...WATCH_SYMBOLS.slice(0, 5).map((s) => `reference.${s}`),
-        ];
+        const topics = WATCH_SYMBOLS.map((s) => `price.${s}`);
         ws.send(JSON.stringify({ type: "subscribe", topics }));
       };
 
@@ -80,18 +111,6 @@ export function LiveSpreadTicker() {
                   msg.data.change_24h !== undefined
                     ? Number(msg.data.change_24h)
                     : prev[sym]?.change24h,
-                updatedAt: msg.data.timestamp,
-              },
-            }));
-          } else if (msg.type === "reference" && msg.data?.symbol && msg.data?.mid_price) {
-            const sym = String(msg.data.symbol).toUpperCase();
-            setTicks((prev) => ({
-              ...prev,
-              [sym]: {
-                ...prev[sym],
-                symbol: sym,
-                price: prev[sym]?.price ?? Number(msg.data.mid_price),
-                refMid: Number(msg.data.mid_price),
                 updatedAt: msg.data.timestamp,
               },
             }));
@@ -119,10 +138,43 @@ export function LiveSpreadTicker() {
 
   const items = WATCH_SYMBOLS.map((s) => ticks[s]).filter(Boolean);
 
+  function renderTapeSegment(prefix: string) {
+    return (
+      <div className="flex shrink-0 items-center gap-6 pr-6">
+        {items.map((t) => (
+          <div
+            key={`${prefix}-${t.symbol}`}
+            className="flex shrink-0 items-center gap-1.5 font-mono text-[11px] tabular-nums"
+          >
+            <span className="font-semibold text-[#171412]">{t.symbol}</span>
+            {SHORT_NAMES[t.symbol] && (
+              <span className="hidden font-sans text-[11px] text-[#857D74] sm:inline">
+                {SHORT_NAMES[t.symbol]}
+              </span>
+            )}
+            <span className="text-[#453F3A]">${t.price.toFixed(2)}</span>
+            {t.change24h !== undefined && Number.isFinite(t.change24h) && (
+              <span
+                className={`rounded-full px-1.5 py-0.5 text-[10px] font-medium ${
+                  t.change24h >= 0
+                    ? "bg-teal-50 text-teal-800"
+                    : "bg-rose-50 text-rose-800"
+                }`}
+              >
+                {t.change24h >= 0 ? "+" : ""}
+                {t.change24h.toFixed(2)}%
+              </span>
+            )}
+          </div>
+        ))}
+      </div>
+    );
+  }
+
   return (
     <div className="border-b border-[#E5E1D8] bg-[#FAF8F4]">
-      <div className="mx-auto flex max-w-7xl items-center gap-3.5 overflow-x-auto px-4 py-2 text-xs sm:px-6 lg:px-8">
-        <div className="flex shrink-0 items-center gap-1.5 border-r border-[#E5E1D8] pr-3.5 font-mono text-[10px] font-semibold uppercase tracking-widest text-[#701735]">
+      <div className="mx-auto flex max-w-7xl items-center px-4 py-2 text-xs sm:px-6 lg:px-8">
+        <div className="z-10 flex shrink-0 items-center gap-1.5 border-r border-[#E5E1D8] bg-[#FAF8F4] pr-3.5 font-mono text-[10px] font-semibold uppercase tracking-widest text-[#701735]">
           <Radio
             className={`h-3 w-3 ${
               wsState === "live"
@@ -133,41 +185,24 @@ export function LiveSpreadTicker() {
             }`}
           />
           {wsState === "live"
-            ? "24/7 Live Feed"
+            ? "24/7 Live Tape"
             : wsState === "connecting"
-              ? "Syncing Feed…"
+              ? "Syncing Tape…"
               : "Live Market"}
         </div>
 
-        <div className="flex items-center gap-5">
+        <div className="allot-marquee-viewport relative ml-2 min-w-0 flex-1 overflow-hidden">
           {items.length === 0 ? (
-            <div className="flex items-center gap-3">
-              {[1, 2, 3, 4, 5].map((n) => (
-                <div key={n} className="skeleton h-4 w-24 rounded-md" />
+            <div className="flex items-center gap-4 pl-2">
+              {[1, 2, 3, 4, 5, 6].map((n) => (
+                <div key={n} className="skeleton h-4 w-28 shrink-0 rounded-md" />
               ))}
             </div>
           ) : (
-            items.map((t) => (
-              <div
-                key={t.symbol}
-                className="flex shrink-0 items-center gap-1.5 font-mono text-[11px] tabular-nums"
-              >
-                <span className="font-semibold text-[#171412]">{t.symbol}</span>
-                <span className="text-[#625B54]">${t.price.toFixed(2)}</span>
-                {t.change24h !== undefined && Number.isFinite(t.change24h) && (
-                  <span
-                    className={`rounded-full px-1.5 py-0.5 text-[10px] font-medium ${
-                      t.change24h >= 0
-                        ? "bg-teal-50 text-teal-800"
-                        : "bg-rose-50 text-rose-800"
-                    }`}
-                  >
-                    {t.change24h >= 0 ? "+" : ""}
-                    {t.change24h.toFixed(2)}%
-                  </span>
-                )}
-              </div>
-            ))
+            <div className="allot-marquee-track" title="Hover to pause live tape">
+              {renderTapeSegment("a")}
+              {renderTapeSegment("b")}
+            </div>
           )}
         </div>
       </div>
