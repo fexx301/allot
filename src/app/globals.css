@@ -1,0 +1,23 @@
+@import "tailwindcss";
+
+:root {
+  --bg-canvas: #f7f6f2;
+  --bg-surface: #ffffff;
+  --border-subtle: #e5e4de;
+  --ink-primary: #0f172a;
+  --ink-muted: #57534e;
+  --accent-emerald: #047857;
+  --accent-amber: #b45309;
+  --accent-indigo: #3730a3;
+}
+
+body {
+  background-color: var(--bg-canvas);
+  color: var(--ink-primary);
+  font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+  -webkit-font-smoothing: antialiased;
+}
+
+.tabular-nums {
+  font-variant-numeric: tabular-nums;
+}

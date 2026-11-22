@@ -9,4 +9,5 @@ coverage/
 *org-key*.json
 *signer-key*.json
 .data/
+tsconfig.tsbuildinfo
 .DS_Store

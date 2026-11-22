@@ -1,0 +1,338 @@
+"use client";
+
+import { useCallback, useEffect, useState } from "react";
+import { ArrowUpRight, Loader2, RefreshCw, Send, Shield, XCircle } from "lucide-react";
+import { loadOrCreateBrowserVault, stampGatewayPayload, type LocalP256SignerVault } from "@/lib/allot/signer";
+import type { ConnectedGatewayWallet } from "@/components/WalletModal";
+import type { GatewayBalance, GatewayOrderResponse } from "@/lib/tm-gateway/types";
+
+interface WalletApiResponse {
+  userId: string;
+  fetchedAt: string;
+  totalUsdcAvailable: number;
+  balances: GatewayBalance[];
+  orders: GatewayOrderResponse[];
+  carryoverCents: Record<string, number>;
+}
+
+export default function OrdersAndWalletPage() {
+  const [vault, setVault] = useState<LocalP256SignerVault | null>(null);
+  const [wallet, setWallet] = useState<ConnectedGatewayWallet | null>(null);
+  const [data, setData] = useState<WalletApiResponse | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [statusMsg, setStatusMsg] = useState<string | null>(null);
+
+  // Cash floor withdrawal form
+  const [withdrawTo, setWithdrawTo] = useState("");
+  const [withdrawAmount, setWithdrawAmount] = useState("1.00");
+  const [withdrawAssetId, setWithdrawAssetId] = useState("");
+  const [submitting, setSubmitting] = useState(false);
+
+  useEffect(() => {
+    try {
+      setVault(loadOrCreateBrowserVault());
+      const saved = window.localStorage.getItem("allot.connected.wallet.v1");
+      if (saved) setWallet(JSON.parse(saved));
+    } catch {
+      // ignore
+    }
+  }, []);
+
+  const loadWallet = useCallback(async () => {
+    setLoading(true);
+    try {
+      const qs = wallet?.userId ? `?userId=${encodeURIComponent(wallet.userId)}` : "";
+      const res = await fetch(`/api/wallet${qs}`);
+      const json = await res.json();
+      if (res.ok) {
+        setData(json);
+        const usdc = (json.balances as GatewayBalance[]).find(
+          (b) => b.symbol.toUpperCase() === "USDC" && b.asset_id,
+        );
+        if (usdc?.asset_id && !withdrawAssetId) setWithdrawAssetId(usdc.asset_id);
+      }
+    } finally {
+      setLoading(false);
+    }
+  }, [wallet?.userId, withdrawAssetId]);
+
+  useEffect(() => {
+    loadWallet();
+  }, [loadWallet]);
+
+  async function handleCancelOrder(orderId: string) {
+    if (!vault || !data) return;
+    setSubmitting(true);
+    setStatusMsg(null);
+    try {
+      const prepRes = await fetch("/api/orders/manage", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          action: "prepare_cancel",
+          userId: data.userId,
+          orderId,
+        }),
+      });
+      const prep = await prepRes.json();
+      if (!prepRes.ok) throw new Error(prep.error || "Prepare cancel failed");
+
+      const payloads: Array<{ payload: string }> = prep.order?.payloads ?? [];
+      const signatures = await Promise.all(
+        payloads.map((p) => stampGatewayPayload(vault, p.payload)),
+      );
+
+      const execRes = await fetch("/api/orders/manage", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          action: "execute_cancel",
+          userId: data.userId,
+          orderId,
+          signatures,
+        }),
+      });
+      const exec = await execRes.json();
+      if (!execRes.ok) throw new Error(exec.error || "Cancel execute failed");
+      setStatusMsg(`Order ${orderId} canceled (status: ${exec.order?.status})`);
+      await loadWallet();
+    } catch (err) {
+      setStatusMsg(err instanceof Error ? err.message : "Cancel failed");
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  async function handleWithdraw(e: React.FormEvent) {
+    e.preventDefault();
+    if (!vault || !data || !withdrawAssetId) return;
+    setSubmitting(true);
+    setStatusMsg(null);
+    try {
+      const prepRes = await fetch("/api/transfers", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          action: "prepare",
+          userId: data.userId,
+          asset_id: withdrawAssetId,
+          qty: withdrawAmount,
+          to: withdrawTo.trim(),
+        }),
+      });
+      const prep = await prepRes.json();
+      if (!prepRes.ok) throw new Error(prep.error || "Prepare transfer failed");
+
+      const payloads: Array<{ payload: string }> = prep.transfer?.payloads ?? [];
+      const signatures = await Promise.all(
+        payloads.map((p) => stampGatewayPayload(vault, p.payload)),
+      );
+
+      const execRes = await fetch("/api/transfers", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          action: "execute",
+          userId: data.userId,
+          transferId: prep.transfer.transfer_id || prep.transfer.id,
+          signatures,
+        }),
+      });
+      const exec = await execRes.json();
+      if (!execRes.ok) throw new Error(exec.error || "Transfer execute failed");
+      setStatusMsg(`Withdrawal submitted (status: ${exec.transfer?.status})`);
+      await loadWallet();
+    } catch (err) {
+      setStatusMsg(err instanceof Error ? err.message : "Withdrawal failed");
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  return (
+    <div className="space-y-6">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <h1 className="text-2xl font-semibold text-slate-900">
+            Non-Custodial Wallet &amp; Resting CLOB Orders
+          </h1>
+          <p className="text-sm text-stone-600">
+            Live balances, resting CeFi limit orders, and instant Cash Floor USDC transfers on True
+            Markets Gateway.
+          </p>
+        </div>
+        <button
+          onClick={loadWallet}
+          disabled={loading}
+          className="inline-flex items-center gap-1.5 rounded-xl border border-[#E5E4DE] bg-white px-3.5 py-2 text-xs font-medium text-slate-800 hover:bg-stone-50"
+        >
+          <RefreshCw className={`h-3.5 w-3.5 ${loading ? "animate-spin" : ""}`} />
+          Sync Gateway State
+        </button>
+      </div>
+
+      {statusMsg && (
+        <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-xs text-emerald-900">
+          {statusMsg}
+        </div>
+      )}
+
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-12">
+        {/* Balances & Orders */}
+        <div className="space-y-6 lg:col-span-7">
+          <div className="rounded-2xl border border-[#E5E4DE] bg-white p-5 shadow-xs">
+            <div className="flex items-center justify-between">
+              <h2 className="text-sm font-semibold uppercase tracking-wider text-stone-500">
+                Live Gateway Balances
+              </h2>
+              <span className="font-mono text-xs text-stone-500">
+                user: {data?.userId.slice(0, 12) ?? "…"}…
+              </span>
+            </div>
+
+            {loading ? (
+              <div className="py-8 text-center text-xs text-stone-500">Loading live balances…</div>
+            ) : !data?.balances.length ? (
+              <div className="mt-4 rounded-xl border border-dashed border-[#E5E4DE] bg-[#F7F6F2] p-5 text-center text-xs text-stone-600">
+                Wallet currently holds $0.00. Send a few USDC on Base or Solana to your Paylink
+                deposit address to run live fills and test instant Cash Floor withdrawals.
+              </div>
+            ) : (
+              <div className="mt-4 divide-y divide-[#E5E4DE]">
+                {data.balances.map((b, i) => (
+                  <div key={`${b.symbol}-${b.chain}-${i}`} className="flex items-center justify-between py-3">
+                    <div>
+                      <div className="font-mono text-sm font-semibold text-slate-900">{b.symbol}</div>
+                      <div className="text-xs text-stone-500">
+                        {b.chain || b.venue || "cefi"}
+                      </div>
+                    </div>
+                    <div className="text-right font-mono tabular-nums">
+                      <div className="text-sm font-semibold text-slate-900">{b.available}</div>
+                      {b.usd_value && (
+                        <div className="text-xs text-stone-500">${Number(b.usd_value).toFixed(2)}</div>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          <div className="rounded-2xl border border-[#E5E4DE] bg-white p-5 shadow-xs">
+            <h2 className="text-sm font-semibold uppercase tracking-wider text-stone-500">
+              Gateway Orders (Market &amp; Resting CeFi CLOB Limit)
+            </h2>
+
+            {!data?.orders.length ? (
+              <div className="mt-4 rounded-xl border border-dashed border-[#E5E4DE] bg-[#F7F6F2] p-5 text-center text-xs text-stone-600">
+                No executed or resting orders yet for this Gateway user.
+              </div>
+            ) : (
+              <div className="mt-4 space-y-2.5">
+                {data.orders.map((o) => {
+                  const id = o.order_id || o.id || "";
+                  return (
+                    <div
+                      key={id}
+                      className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-[#E5E4DE] bg-[#F7F6F2]/50 p-3.5 text-xs"
+                    >
+                      <div>
+                        <div className="flex items-center gap-2 font-mono">
+                          <span className="font-semibold text-slate-900">{o.symbol || o.asset_id?.slice(0, 8)}</span>
+                          <span className="uppercase text-stone-600">{o.type} {o.side}</span>
+                          <span className="rounded bg-white px-1.5 py-0.5 text-[10px] font-semibold ring-1 ring-[#E5E4DE]">
+                            {o.status}
+                          </span>
+                        </div>
+                        <div className="mt-1 font-mono text-[11px] text-stone-500">
+                          qty={o.executed_qty || o.qty} {o.price ? `@ $${o.price}` : ""} · id={id.slice(0, 12)}…
+                        </div>
+                      </div>
+                      {o.status === "active" && (
+                        <button
+                          onClick={() => handleCancelOrder(id)}
+                          disabled={submitting}
+                          className="inline-flex items-center gap-1 rounded-lg border border-red-200 bg-white px-2.5 py-1.5 text-xs font-medium text-red-700 hover:bg-red-50"
+                        >
+                          <XCircle className="h-3.5 w-3.5" />
+                          Sign &amp; Cancel
+                        </button>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Instant Cash Floor Withdrawal */}
+        <div className="lg:col-span-5">
+          <div className="rounded-2xl border border-[#E5E4DE] bg-white p-5 shadow-xs">
+            <div className="flex items-center gap-2">
+              <Send className="h-4 w-4 text-emerald-700" />
+              <h2 className="text-sm font-semibold uppercase tracking-wider text-stone-500">
+                Withdraw Protected Cash Floor
+              </h2>
+            </div>
+            <p className="mt-1.5 text-xs text-stone-600">
+              Your protected rent/cash USDC is never locked up. Send tokens out anytime via{" "}
+              <code className="font-mono">POST /v1/gateway/transfers</code> signed locally by your
+              browser P-256 key.
+            </p>
+
+            <form onSubmit={handleWithdraw} className="mt-4 space-y-3">
+              <div>
+                <label className="block text-xs font-medium text-stone-700">
+                  Destination Address (same chain)
+                </label>
+                <input
+                  value={withdrawTo}
+                  onChange={(e) => setWithdrawTo(e.target.value)}
+                  placeholder="0x… or Solana address"
+                  required
+                  className="mt-1 w-full rounded-xl border border-[#E5E4DE] bg-[#F7F6F2] px-3 py-2 font-mono text-xs text-slate-900 outline-none focus:border-slate-900 focus:bg-white"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-stone-700">Amount (USDC)</label>
+                <input
+                  type="number"
+                  step="0.01"
+                  min="0.01"
+                  value={withdrawAmount}
+                  onChange={(e) => setWithdrawAmount(e.target.value)}
+                  required
+                  className="mt-1 w-full rounded-xl border border-[#E5E4DE] bg-[#F7F6F2] px-3 py-2 font-mono text-sm font-semibold text-slate-900 outline-none focus:border-slate-900 focus:bg-white"
+                />
+              </div>
+
+              <div className="rounded-xl border border-[#E5E4DE] bg-[#F7F6F2] p-3 text-[11px] text-stone-600">
+                <div className="flex items-center gap-1.5 font-medium text-slate-800">
+                  <Shield className="h-3.5 w-3.5 text-emerald-700" />
+                  Non-custodial withdrawal guarantee
+                </div>
+                <p className="mt-1">
+                  Even if Allot shuts down, you can always withdraw funds or sell tokenized stocks
+                  back to USDC because only your P-256 key ({vault?.fingerprint ?? "…"}) authorizes
+                  transfers.
+                </p>
+              </div>
+
+              <button
+                type="submit"
+                disabled={submitting || !withdrawAssetId || !withdrawTo}
+                className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-slate-900 px-4 py-2.5 text-sm font-medium text-white transition hover:bg-emerald-800 disabled:opacity-40"
+              >
+                {submitting && <Loader2 className="h-4 w-4 animate-spin" />}
+                Sign with P-256 &amp; Send USDC
+                <ArrowUpRight className="h-4 w-4" />
+              </button>
+            </form>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
