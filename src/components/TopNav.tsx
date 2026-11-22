@@ -75,7 +75,7 @@ export function TopNav() {
           const active =
             href === "/"
               ? pathname === "/"
-              : pathname.startsWith(href === "/pay/demo-engineer" ? "/pay" : href);
+              : pathname.startsWith(href === "/pay/femi" ? "/pay" : href);
           return (
             <Link
               key={href}

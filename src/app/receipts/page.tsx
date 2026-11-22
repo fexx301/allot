@@ -60,7 +60,6 @@ export default function ReceiptsListPage() {
                 href={`/receipt/${r.receiptId}`}
                 className="group overflow-hidden rounded-2xl border border-[#E5E1D8] bg-white shadow-xs transition hover:border-[#701735]"
               >
-                <div className={`h-1 w-full ${isLive ? "bg-[#701735]" : "bg-amber-600/70"}`} />
                 <div className="p-5">
                   <div className="flex items-center justify-between gap-2">
                     <span

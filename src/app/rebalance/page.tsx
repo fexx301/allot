@@ -206,7 +206,6 @@ export default function RebalancePage() {
   return (
     <div className="space-y-6">
       <section className="overflow-hidden rounded-3xl border border-[#E5E1D8] bg-white shadow-sm">
-        <div className="h-1.5 w-full bg-[#701735]" />
         <div className="p-6">
           <div className="flex flex-wrap items-start justify-between gap-4">
             <div className="max-w-2xl">

@@ -907,7 +907,6 @@ export function PaydayStudio() {
 
       {/* SIGNATURE VISUAL MOMENT: Interactive Tear-Off Paycheck Stub */}
       <section className="relative overflow-hidden rounded-3xl border border-[#E5E1D8] bg-white shadow-sm">
-        <div className="h-1.5 w-full bg-[#701735]" />
         <div className="grid grid-cols-1 lg:grid-cols-12">
           {/* LEFT RETAINED STUB: Protected Cash Floor */}
           <div

@@ -104,7 +104,6 @@ export default function PaylinkPage({
 
       {/* Bespoke Freelancer Invoice Card */}
       <div className="overflow-hidden rounded-3xl border border-[#E5E1D8] bg-white shadow-sm">
-        <div className="h-2 w-full bg-[#701735]" />
         <div className="border-b border-dashed border-[#D8D1C5] bg-[#FAF8F4] p-7">
           <div className="flex flex-wrap items-start justify-between gap-4">
             <div>
