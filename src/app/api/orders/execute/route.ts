@@ -91,7 +91,7 @@ export async function POST(req: NextRequest) {
                 : "error",
             requestedUsd: item.requestedUsd,
             benchmarkPrice: item.benchmarkPrice,
-            driftBps: item.driftBps,
+            driftBps: undefined,
           });
         }
       }

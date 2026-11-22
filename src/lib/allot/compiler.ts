@@ -178,6 +178,20 @@ export interface CompilePaydayInput {
   quotesByEconomicId: Map<string, LiveAssetQuoteSnapshot>;
   mode: "LIVE_QUOTES_PREVIEW" | "LIVE_GATEWAY";
   nowIso?: string;
+  maxReferenceAgeSec?: number; // Fail-closed staleness window for marketPriceTimestamp (default 180s)
+}
+
+export const DEFAULT_MAX_REFERENCE_AGE_SEC = 180;
+
+export function getReferenceAgeSec(
+  timestampIso: string | null | undefined,
+  nowIso: string,
+): number | null {
+  if (!timestampIso) return null;
+  const tsMs = Date.parse(timestampIso);
+  const nowMs = Date.parse(nowIso);
+  if (!Number.isFinite(tsMs) || !Number.isFinite(nowMs)) return null;
+  return Math.max(0, Math.round((nowMs - tsMs) / 1000));
 }
 
 export function compilePaydayPlan(input: CompilePaydayInput): CompiledPaydayPlan {
@@ -190,6 +204,7 @@ export function compilePaydayPlan(input: CompilePaydayInput): CompiledPaydayPlan
     quotesByEconomicId,
     mode,
     nowIso = new Date().toISOString(),
+    maxReferenceAgeSec = DEFAULT_MAX_REFERENCE_AGE_SEC,
   } = input;
 
   const safeIncoming = Math.max(0, Math.round(incomingCents));
@@ -380,6 +395,42 @@ export function compilePaydayPlan(input: CompilePaydayInput): CompiledPaydayPlan
       };
     }
 
+    // Hard Refusal #2c (Fail-Closed): STALE_REFERENCE_PRICE -> hold cash if benchmark timestamp is stale
+    const refAgeSec = getReferenceAgeSec(snap.marketPriceTimestamp, nowIso);
+    if (refAgeSec === null || refAgeSec > maxReferenceAgeSec) {
+      refusals.add("STALE_REFERENCE_PRICE");
+      blockedCents += allocatedCents;
+      return {
+        economicAssetId: leg.economicAssetId,
+        symbol: leg.symbol,
+        name: leg.name,
+        icon: snap.icon,
+        weightPct: leg.weightPct,
+        allocatedCents,
+        effectiveCents,
+        action: "BLOCKED_STALE_REFERENCE",
+        reasonCode: "STALE_REFERENCE_PRICE",
+        reasonMessage:
+          refAgeSec === null
+            ? `Reference timestamp missing for ${leg.symbol}. Held safely in USDC until a fresh benchmark arrives.`
+            : `Reference price for ${leg.symbol} is ${refAgeSec}s old (max allowed: ${maxReferenceAgeSec}s). Refused stale spread calculation — USDC held safely.`,
+        targetVenue: null,
+        targetAssetId: null,
+        targetChain: null,
+        orderType: null,
+        qtyUnit: null,
+        orderQty: null,
+        limitPrice: null,
+        marketPrice: snap.marketPrice,
+        marketPriceTimestamp: snap.marketPriceTimestamp,
+        quotePrice: snap.quotePrice,
+        quoteFeeUsd: snap.quoteFeeUsd,
+        driftBps: null,
+        estimatedSavingsUsd: 0,
+        carryoverDeltaCents: 0,
+      };
+    }
+
     const driftBps = computeDriftBps(snap.quotePrice, snap.marketPrice);
     const legUsd = effectiveCents / 100;
 
@@ -406,6 +457,7 @@ export function compilePaydayPlan(input: CompilePaydayInput): CompiledPaydayPlan
         orderQty: legUsd.toFixed(2),
         limitPrice: null,
         marketPrice: snap.marketPrice,
+        marketPriceTimestamp: snap.marketPriceTimestamp,
         quotePrice: snap.quotePrice,
         quoteFeeUsd: snap.quoteFeeUsd,
         driftBps,

@@ -13,8 +13,12 @@ import {
   verifyPlanAgainstLocalRule,
   verifyPreparedOrderQuote,
 } from "../signer";
-import { decodeSharePayload, encodeSharePayload } from "../share-token";
-import type { LiveAssetQuoteSnapshot, PaycheckRule } from "../types";
+import {
+  buildReceiptSharePath,
+  decodeSharePayload,
+  encodeSharePayload,
+} from "../share-token";
+import type { LiveAssetQuoteSnapshot, PaycheckRule, PaydayReceipt } from "../types";
 
 const BASE_RULE: PaycheckRule = {
   ruleId: "test-rule-1",
@@ -44,7 +48,7 @@ function makeQuotes(): Map<string, LiveAssetQuoteSnapshot> {
         cefiAssetId: "aapl-cefi",
         supportsClobLimit: true,
         marketPrice: 347.21,
-        marketPriceTimestamp: "2026-11-22T08:00:00Z",
+        marketPriceTimestamp: "2026-11-22T08:04:30Z",
         quotePrice: 347.55, // +9.8 bps -> inside 25 bps cap
         quoteQty: 2.877,
         quoteFeeUsd: 1,
@@ -63,7 +67,7 @@ function makeQuotes(): Map<string, LiveAssetQuoteSnapshot> {
         cefiAssetId: "nvda-cefi",
         supportsClobLimit: true,
         marketPrice: 129.57,
-        marketPriceTimestamp: "2026-11-22T08:00:00Z",
+        marketPriceTimestamp: "2026-11-22T08:04:30Z",
         quotePrice: 130.14, // +44.0 bps -> exceeds 25 bps cap -> CLOB limit fallback!
         quoteQty: 4.61,
         quoteFeeUsd: 1,
@@ -82,7 +86,7 @@ function makeQuotes(): Map<string, LiveAssetQuoteSnapshot> {
         cefiAssetId: null,
         supportsClobLimit: false, // DeFi-only stock for testing BLOCKED_DRIFT_NO_CLOB
         marketPrice: 129.39,
-        marketPriceTimestamp: "2026-11-22T08:00:00Z",
+        marketPriceTimestamp: "2026-11-22T08:04:30Z",
         quotePrice: 129.96, // +44.1 bps -> blocked safely
         quoteQty: 3.07,
         quoteFeeUsd: 1,
@@ -198,7 +202,7 @@ describe("Allot Deterministic Split Compiler", () => {
       rule: tinyRule,
       quotesByEconomicId: makeQuotes(),
       mode: "LIVE_QUOTES_PREVIEW",
-      nowIso: "2026-11-22T08:10:00Z",
+      nowIso: "2026-11-22T08:05:30Z",
     });
 
     const nvda2 = second.legs.find((l) => l.symbol === "NVDAC")!;
@@ -273,6 +277,7 @@ describe("Allot Deterministic Split Compiler", () => {
       rule: singleLegRule,
       quotesByEconomicId: quotes,
       mode: "LIVE_GATEWAY",
+      nowIso: "2026-11-22T08:05:00Z",
     });
 
     expect(plan.planStatus).toBe("NO_EXECUTABLE_LEGS");
@@ -282,6 +287,54 @@ describe("Allot Deterministic Split Compiler", () => {
     expect(plan.legs[0].driftBps).toBeNull();
     expect(plan.totals.executableMarketCents).toBe(0);
     expect(plan.protectedCashCents).toBe(50_000);
+  });
+
+  it("Finding 1b: holds cash fail-closed with STALE_REFERENCE_PRICE when benchmark timestamp exceeds 180s max age", () => {
+    const quotes = makeQuotes();
+    const aapl = quotes.get("econ-aapl")!;
+    // 10 minutes old (600s > 180s maxReferenceAgeSec)
+    quotes.set("econ-aapl", { ...aapl, marketPriceTimestamp: "2026-11-22T07:55:00Z" });
+
+    const singleLegRule: PaycheckRule = {
+      ...BASE_RULE,
+      cashFloorCents: 0,
+      legs: [{ economicAssetId: "econ-aapl", symbol: "AAPLC", name: "Apple", weightPct: 100 }],
+    };
+
+    const plan = compilePaydayPlan({
+      depositEventId: "dep-stale-ref-1",
+      incomingCents: 50_000, // $500
+      existingCashCents: 0,
+      rule: singleLegRule,
+      quotesByEconomicId: quotes,
+      mode: "LIVE_GATEWAY",
+      nowIso: "2026-11-22T08:05:00Z",
+    });
+
+    expect(plan.planStatus).toBe("NO_EXECUTABLE_LEGS");
+    expect(plan.refusalSummary).toContain("STALE_REFERENCE_PRICE");
+    expect(plan.legs[0].action).toBe("BLOCKED_STALE_REFERENCE");
+    expect(plan.legs[0].reasonCode).toBe("STALE_REFERENCE_PRICE");
+    expect(plan.totals.executableMarketCents).toBe(0);
+    expect(plan.protectedCashCents).toBe(50_000);
+
+    // Browser P-256 signer ALSO independently refuses if a tampered server sends a stale timestamp on an executable leg
+    const tamperedPlan = {
+      ...plan,
+      legs: [
+        {
+          ...plan.legs[0],
+          action: "EXECUTE_DEFI_MARKET" as const,
+          driftBps: 9.8,
+          marketPriceTimestamp: "2026-11-22T07:55:00Z",
+        },
+      ],
+    };
+    const signerCheck = verifyPlanAgainstLocalRule(tamperedPlan, singleLegRule, {
+      nowIso: "2026-11-22T08:05:00Z",
+    });
+    expect(signerCheck.ok).toBe(false);
+    if (!signerCheck.ok) expect(signerCheck.code).toBe("SIGNER_REQUIRED");
   });
 
   it("Finding 2: carryover never breaches the protected cash floor ($110 available, $100 floor, $1.50 carryover -> max $10.00 buy, $100.00 protected)", () => {
@@ -299,6 +352,7 @@ describe("Allot Deterministic Split Compiler", () => {
       rule,
       quotesByEconomicId: makeQuotes(),
       mode: "LIVE_GATEWAY",
+      nowIso: "2026-11-22T08:05:00Z",
     });
 
     expect(plan.planStatus).toBe("READY_TO_SIGN");
@@ -347,11 +401,52 @@ describe("Allot Deterministic Split Compiler", () => {
     }
   });
 
-  it("Finding 4: stateless share tokens round-trip receipts cleanly across serverless instances", () => {
-    const sample = { receiptId: "rcpt_stateless_1", planHash: "abc123", mode: "LIVE_QUOTES_PREVIEW" };
-    const token = encodeSharePayload(sample);
-    const decoded = decodeSharePayload<typeof sample>(token);
-    expect(decoded).toEqual(sample);
+  it("Finding 3b: actual fill spread on executed receipts computes spread from executed VWAP vs benchmark (not preview quote)", () => {
+    const benchmarkPrice = 348.92;
+    const previewQuotePrice = 349.05; // +3.73 bps at preview
+    const executedVwap = 349.3427; // +12.11 bps actual on-chain fill
+    const previewBps = computeDriftBps(previewQuotePrice, benchmarkPrice);
+    const actualFillBps = computeDriftBps(executedVwap, benchmarkPrice);
+
+    expect(previewBps).toBeCloseTo(3.73, 1);
+    expect(actualFillBps).toBeCloseTo(12.11, 1);
+    expect(actualFillBps).not.toBe(previewBps);
+  });
+
+  it("Finding 4: stateless share tokens round-trip full receipts cleanly across fresh serverless instances", () => {
+    const plan = compilePaydayPlan({
+      depositEventId: "dep-stateless-1",
+      incomingCents: 150_000,
+      existingCashCents: 100_000,
+      rule: BASE_RULE,
+      quotesByEconomicId: makeQuotes(),
+      mode: "LIVE_QUOTES_PREVIEW",
+      nowIso: "2026-11-22T08:05:00Z",
+    });
+    const receipt: PaydayReceipt = {
+      receiptId: "rcpt_stateless_1",
+      createdAt: "2026-11-22T08:05:01Z",
+      mode: "LIVE_QUOTES_PREVIEW",
+      userHandle: "femi",
+      userId: "user-1",
+      signerPublicKey: "03abc",
+      planHash: plan.planHash,
+      signerProof: {
+        verifiedLocalPlanHash: true,
+        stampPreview: "eyJ…123",
+        scheme: "SIGNATURE_SCHEME_TK_API_P256",
+      },
+      plan,
+      executions: [],
+    };
+    const sharePath = buildReceiptSharePath(receipt);
+    expect(sharePath.startsWith("/receipt/rcpt_stateless_1?d=")).toBe(true);
+    const token = new URL(`https://allot-ashen.vercel.app${sharePath}`).searchParams.get("d");
+    const decoded = decodeSharePayload<PaydayReceipt>(token);
+    expect(decoded).toEqual(receipt);
+
+    const smallToken = encodeSharePayload({ ok: true });
+    expect(decodeSharePayload<{ ok: boolean }>(smallToken)).toEqual({ ok: true });
     expect(decodeSharePayload("corrupt-token")).toBeNull();
   });
 });

@@ -40,12 +40,14 @@ export type LegDecisionAction =
   | "CARRIED_OVER"
   | "BLOCKED_DRIFT_NO_CLOB"
   | "BLOCKED_NO_REFERENCE"
+  | "BLOCKED_STALE_REFERENCE"
   | "BLOCKED_NO_QUOTE";
 
 export type RefusalCode =
   | "CASH_FLOOR_PROTECTED"
   | "PRICE_DRIFT_GUARDED"
   | "MISSING_REFERENCE_PRICE"
+  | "STALE_REFERENCE_PRICE"
   | "BELOW_MIN_NOTIONAL"
   | "BLOCKED_DRIFT_NO_CLOB"
   | "NO_LIVE_QUOTE"
@@ -71,6 +73,7 @@ export interface CompiledLeg {
   orderQty: string | null; // Decimal string ready for POST /v1/gateway/orders
   limitPrice: string | null; // Tick-quantized limit price for STAGE_CEFI_LIMIT
   marketPrice: number | null;
+  marketPriceTimestamp?: string | null;
   quotePrice: number | null;
   quoteFeeUsd: number | null;
   driftBps: number | null;

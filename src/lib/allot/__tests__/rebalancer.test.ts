@@ -88,7 +88,7 @@ describe("Allot Portfolio Drift Rebalancer", () => {
         ],
       },
       quotesByEconomicId: makeQuotes(),
-      nowIso: "2026-11-22T09:00:00Z",
+      nowIso: "2026-11-22T08:01:00Z",
     });
 
     expect(plan.status).toBe("REBALANCE_READY");
@@ -153,10 +153,39 @@ describe("Allot Portfolio Drift Rebalancer", () => {
         ],
       },
       quotesByEconomicId: quotes,
+      nowIso: "2026-11-22T08:01:00Z",
     });
 
     const nvdaLeg = plan.legs.find((l) => l.symbol === "NVDAC")!;
     expect(nvdaLeg.action).toBe("BLOCKED_NO_REFERENCE");
     expect(nvdaLeg.reasonCode).toBe("MISSING_REFERENCE_PRICE");
+  });
+
+  it("fails closed with STALE_REFERENCE_PRICE when a rebalance leg's reference timestamp exceeds 180s", () => {
+    const plan = compileRebalancePlan({
+      holdings: [
+        { economicAssetId: "econ-nvda", symbol: "NVDAC", name: "NVIDIA", qty: 4500 / 130, marketPrice: 130 },
+        { economicAssetId: "econ-aapl", symbol: "AAPLC", name: "Apple", qty: 1500 / 350, marketPrice: 350 },
+      ],
+      rule: {
+        driftThresholdPct: 3,
+        maxSpreadBps: 25,
+        minTradeCents: 500,
+        autoStageClobLimit: true,
+        targets: [
+          { economicAssetId: "econ-nvda", symbol: "NVDAC", name: "NVIDIA", weightPct: 50 },
+          { economicAssetId: "econ-aapl", symbol: "AAPLC", name: "Apple", weightPct: 50 },
+        ],
+      },
+      quotesByEconomicId: makeQuotes(), // timestamps at 08:00:00Z
+      nowIso: "2026-11-22T08:10:00Z", // 600s > 180s max age
+    });
+
+    const nvdaLeg = plan.legs.find((l) => l.symbol === "NVDAC")!;
+    expect(nvdaLeg.action).toBe("BLOCKED_STALE_REFERENCE");
+    expect(nvdaLeg.reasonCode).toBe("STALE_REFERENCE_PRICE");
+    expect(plan.status).toBe("BALANCED_NO_ACTION");
+    expect(plan.totalSellCents).toBe(0);
+    expect(plan.totalBuyCents).toBe(0);
   });
 });

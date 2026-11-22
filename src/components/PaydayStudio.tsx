@@ -293,6 +293,11 @@ function consumerBadgeForLeg(
         label: "Held · No Reference Price",
         tone: "border-rose-200 bg-rose-50 text-rose-900",
       };
+    case "BLOCKED_STALE_REFERENCE":
+      return {
+        label: "Held · Stale Reference",
+        tone: "border-rose-200 bg-rose-50 text-rose-900",
+      };
     case "BLOCKED_DRIFT_NO_CLOB":
       return {
         label: "Held · Spread Too Wide",
@@ -365,6 +370,21 @@ export function PaydayStudio() {
   const [planLoading, setPlanLoading] = useState(false);
   const [planError, setPlanError] = useState<string | null>(null);
   const [simulateTamper, setSimulateTamper] = useState(false);
+  const [simulatePriceMove, setSimulatePriceMove] = useState(false);
+  const [priceMoveRefusal, setPriceMoveRefusal] = useState<{
+    symbol: string;
+    name: string;
+    allocatedCents: number;
+    benchmarkPrice: number;
+    previewQuotePrice: number | null;
+    previewDriftBps: number | null;
+    preparedQuotePrice: number | null;
+    preparedDriftBps: number | null;
+    capBps: number;
+    code: string;
+    reason: string;
+    simulated: boolean;
+  } | null>(null);
   const [executing, setExecuting] = useState(false);
   const [execMessage, setExecMessage] = useState<{ type: "ok" | "err"; text: string } | null>(null);
 
@@ -473,6 +493,8 @@ export function PaydayStudio() {
     setMinNotionalUsd(sc.minNotionalUsd);
     setAutoStageClobLimit(sc.autoStageClobLimit);
     setSimulateTamper(false);
+    setSimulatePriceMove(false);
+    setPriceMoveRefusal(null);
     setExecMessage(null);
     setLegs(
       sc.symbols.map((item) => {
@@ -573,6 +595,7 @@ export function PaydayStudio() {
   async function handleSignAndExecute(forcePreview: boolean) {
     if (!plan || !vault) return;
     setExecMessage(null);
+    setPriceMoveRefusal(null);
 
     if (localVerification && !localVerification.ok) {
       setExecMessage({
@@ -580,6 +603,59 @@ export function PaydayStudio() {
         text: `${localVerification.code}: ${localVerification.reason}`,
       });
       return;
+    }
+
+    // Mid-flight price-move refusal demo: exercises the REAL client verifyPreparedOrderQuote()
+    // pre-sign gate before any P-256 signature is emitted.
+    if (simulatePriceMove) {
+      const targetLeg = plan.legs.find(
+        (l) =>
+          l.action === "EXECUTE_DEFI_MARKET" &&
+          l.marketPrice !== null &&
+          l.quotePrice !== null,
+      );
+      if (!targetLeg || targetLeg.marketPrice === null) {
+        setExecMessage({
+          type: "err",
+          text: "No approved market leg in this plan to test a mid-flight jump — switch to $3,500 Salary or raise the spread cap so at least one stock is approved for Instant Fill.",
+        });
+        return;
+      }
+
+      const jumpedPrice = Number(
+        (targetLeg.marketPrice * (1 + (currentRule.maxDriftBps + 40) / 10_000)).toFixed(4),
+      );
+      const legUsd = targetLeg.effectiveCents / 100;
+      const check = verifyPreparedOrderQuote({
+        symbol: targetLeg.symbol,
+        orderType: "market",
+        benchmarkPrice: targetLeg.marketPrice,
+        maxDriftBps: currentRule.maxDriftBps,
+        preparedQuote: {
+          price: jumpedPrice.toFixed(4),
+          qty: legUsd.toFixed(2),
+          qty_out: (legUsd / jumpedPrice).toFixed(6),
+        },
+      });
+
+      if (!check.ok) {
+        setPriceMoveRefusal({
+          symbol: targetLeg.symbol,
+          name: targetLeg.name,
+          allocatedCents: targetLeg.effectiveCents,
+          benchmarkPrice: targetLeg.marketPrice,
+          previewQuotePrice: targetLeg.quotePrice,
+          previewDriftBps: targetLeg.driftBps,
+          preparedQuotePrice: check.preparedPrice,
+          preparedDriftBps: check.preparedDriftBps,
+          capBps: currentRule.maxDriftBps,
+          code: check.code,
+          reason: check.reason,
+          simulated: true,
+        });
+        void compileLivePlan();
+        return;
+      }
     }
 
     setExecuting(true);
@@ -670,6 +746,20 @@ export function PaydayStudio() {
             preparedQuote: p.quote,
           });
           if (!check.ok) {
+            setPriceMoveRefusal({
+              symbol: p.symbol,
+              name: legMeta?.name ?? p.symbol,
+              allocatedCents: legMeta?.effectiveCents ?? 0,
+              benchmarkPrice: legMeta?.marketPrice ?? 0,
+              previewQuotePrice: legMeta?.quotePrice ?? null,
+              previewDriftBps: legMeta?.driftBps ?? null,
+              preparedQuotePrice: check.preparedPrice,
+              preparedDriftBps: check.preparedDriftBps,
+              capBps: currentRule.maxDriftBps,
+              code: check.code,
+              reason: check.reason,
+              simulated: false,
+            });
             void compileLivePlan();
             throw new Error(`${check.code}: ${check.reason}`);
           }
@@ -1470,16 +1560,54 @@ export function PaydayStudio() {
                   local P-256 key.
                 </p>
               </div>
-              <label className="inline-flex cursor-pointer items-center gap-2 rounded-full border border-[#E5E1D8] bg-[#FAF8F4] px-3 py-1.5 text-[11px] font-medium text-[#625B54]">
-                <input
-                  type="checkbox"
-                  checked={simulateTamper}
-                  onChange={(e) => setSimulateTamper(e.target.checked)}
-                  className="accent-rose-700"
-                />
-                Test Tamper Refusal
-              </label>
+              <div className="flex flex-wrap items-center gap-2">
+                <label className="inline-flex cursor-pointer items-center gap-2 rounded-full border border-[#E5E1D8] bg-[#FAF8F4] px-3 py-1.5 text-[11px] font-medium text-[#625B54] transition hover:border-[#701735]/40">
+                  <input
+                    type="checkbox"
+                    checked={simulateTamper}
+                    onChange={(e) => {
+                      setSimulateTamper(e.target.checked);
+                      if (e.target.checked) setPriceMoveRefusal(null);
+                    }}
+                    className="accent-rose-700"
+                  />
+                  Test Tamper Refusal
+                </label>
+                <label
+                  className={`inline-flex cursor-pointer items-center gap-2 rounded-full border px-3 py-1.5 text-[11px] font-medium transition ${
+                    simulatePriceMove
+                      ? "border-amber-300 bg-amber-50 text-amber-900"
+                      : "border-[#E5E1D8] bg-[#FAF8F4] text-[#625B54] hover:border-amber-600/40"
+                  }`}
+                >
+                  <input
+                    type="checkbox"
+                    checked={simulatePriceMove}
+                    onChange={(e) => {
+                      setSimulatePriceMove(e.target.checked);
+                      if (!e.target.checked) setPriceMoveRefusal(null);
+                    }}
+                    className="accent-amber-700"
+                  />
+                  Test Price-Move Refusal
+                </label>
+              </div>
             </div>
+
+            {simulatePriceMove && !priceMoveRefusal && (
+              <div className="mt-3 flex items-start gap-2 rounded-xl border border-amber-200 bg-amber-50/70 px-3 py-2 text-[11px] text-amber-900">
+                <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+                <span>
+                  <strong>Price-move test armed:</strong> clicking Sign simulates a{" "}
+                  <span className="font-mono font-semibold">
+                    +{currentRule.maxDriftBps + 40} bps
+                  </span>{" "}
+                  worse Gateway quote when the order is prepared, exercising{" "}
+                  <code className="font-mono">verifyPreparedOrderQuote()</code> before signing so
+                  your USDC stays untouched.
+                </span>
+              </div>
+            )}
 
             {showGatewayInspector && (
               <div className="mt-3 grid grid-cols-1 gap-2 rounded-xl border border-[#E5E1D8] bg-[#FAF8F4] p-3 font-mono text-[11px] sm:grid-cols-2">
@@ -1501,6 +1629,86 @@ export function PaydayStudio() {
                   <span className="font-mono font-semibold">{localVerification.code}: </span>
                   {localVerification.reason}
                 </div>
+              </div>
+            )}
+
+            {priceMoveRefusal && (
+              <div className="mt-3 rounded-2xl border border-amber-300 bg-amber-50/80 p-4 text-xs text-amber-950">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <div className="flex items-center gap-2">
+                    <ShieldAlert className="h-4 w-4 shrink-0 text-amber-800" />
+                    <span className="font-mono font-semibold text-amber-900">
+                      {priceMoveRefusal.code}
+                    </span>
+                    <span className="rounded-full border border-amber-300 bg-white px-2 py-0.5 font-mono text-[10px] font-medium text-amber-900">
+                      {priceMoveRefusal.simulated
+                        ? "Simulated Mid-Flight Move · Real Client Gate"
+                        : "Live Gateway Prepared Quote Drift"}
+                    </span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSimulatePriceMove(false);
+                      setPriceMoveRefusal(null);
+                    }}
+                    className="font-medium text-[#701735] underline hover:text-[#581028]"
+                  >
+                    Clear &amp; Sign Normally
+                  </button>
+                </div>
+
+                <div className="mt-3 grid grid-cols-1 gap-2.5 sm:grid-cols-3">
+                  <div className="rounded-xl border border-teal-200 bg-white p-2.5">
+                    <div className="font-mono text-[10px] uppercase tracking-wider text-teal-800">
+                      1. Preview Quote (OK)
+                    </div>
+                    <div className="mt-1 font-mono text-sm font-semibold text-[#171412] tabular-nums">
+                      {priceMoveRefusal.symbol}{" "}
+                      {priceMoveRefusal.previewQuotePrice !== null
+                        ? `$${priceMoveRefusal.previewQuotePrice.toFixed(2)}`
+                        : "—"}
+                    </div>
+                    <div className="font-mono text-[11px] text-teal-800 tabular-nums">
+                      {priceMoveRefusal.previewDriftBps !== null
+                        ? `${priceMoveRefusal.previewDriftBps >= 0 ? "+" : ""}${priceMoveRefusal.previewDriftBps.toFixed(1)} bps ≤ ${priceMoveRefusal.capBps} bps cap`
+                        : "Inside cap"}
+                    </div>
+                  </div>
+
+                  <div className="rounded-xl border border-rose-200 bg-white p-2.5">
+                    <div className="font-mono text-[10px] uppercase tracking-wider text-rose-800">
+                      2. Prepared Order (Worse)
+                    </div>
+                    <div className="mt-1 font-mono text-sm font-semibold text-rose-900 tabular-nums">
+                      {priceMoveRefusal.symbol}{" "}
+                      {priceMoveRefusal.preparedQuotePrice !== null
+                        ? `$${priceMoveRefusal.preparedQuotePrice.toFixed(2)}`
+                        : "—"}
+                    </div>
+                    <div className="font-mono text-[11px] text-rose-800 tabular-nums">
+                      {priceMoveRefusal.preparedDriftBps !== null
+                        ? `+${priceMoveRefusal.preparedDriftBps.toFixed(1)} bps > ${priceMoveRefusal.capBps} bps cap`
+                        : "Exceeded cap"}
+                    </div>
+                  </div>
+
+                  <div className="rounded-xl border border-[#EAD2DA] bg-[#F9EFF2] p-2.5">
+                    <div className="font-mono text-[10px] uppercase tracking-wider text-[#701735]">
+                      3. Worker Protected
+                    </div>
+                    <div className="mt-1 font-mono text-sm font-semibold text-[#701735] tabular-nums">
+                      {fmtUsd(priceMoveRefusal.allocatedCents)} in USDC
+                    </div>
+                    <div className="text-[11px] text-[#701735]">
+                      0 P-256 signatures sent · Re-quoted
+                    </div>
+                  </div>
+                </div>
+
+                <p className="mt-2.5 text-[11px] leading-relaxed text-amber-900">
+                  {priceMoveRefusal.reason}
+                </p>
               </div>
             )}
 
@@ -1533,7 +1741,9 @@ export function PaydayStudio() {
                   className="inline-flex items-center gap-2 rounded-full bg-[#701735] px-5 py-2.5 text-sm font-medium text-white shadow-xs transition hover:bg-[#581028] disabled:opacity-40"
                 >
                   <KeyRound className="h-4 w-4" />
-                  Sign Locally &amp; Mint Receipt
+                  {simulatePriceMove
+                    ? "Trigger Price-Move Refusal Test"
+                    : "Sign Locally & Mint Receipt"}
                 </button>
 
                 {connectedWallet && (

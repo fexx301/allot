@@ -2,6 +2,8 @@ import { createHash } from "node:crypto";
 import {
   canonicalJson,
   computeDriftBps,
+  DEFAULT_MAX_REFERENCE_AGE_SEC,
+  getReferenceAgeSec,
   quantizeBaseQty,
   quantizeTickPrice,
 } from "./compiler";
@@ -32,6 +34,7 @@ export type RebalanceLegAction =
   | "SKIP_WITHIN_BAND"
   | "SKIP_BELOW_MIN"
   | "BLOCKED_NO_REFERENCE"
+  | "BLOCKED_STALE_REFERENCE"
   | "BLOCKED_DRIFT_NO_CLOB";
 
 export interface CompiledRebalanceLeg {
@@ -52,6 +55,7 @@ export interface CompiledRebalanceLeg {
     | "WITHIN_DRIFT_BAND"
     | "BELOW_MIN_NOTIONAL"
     | "MISSING_REFERENCE_PRICE"
+    | "STALE_REFERENCE_PRICE"
     | "PRICE_DRIFT_GUARDED"
     | "BLOCKED_DRIFT_NO_CLOB";
   reasonMessage: string;
@@ -84,8 +88,15 @@ export function compileRebalancePlan(input: {
   rule: RebalanceRule;
   quotesByEconomicId: Map<string, LiveAssetQuoteSnapshot>;
   nowIso?: string;
+  maxReferenceAgeSec?: number;
 }): CompiledRebalancePlan {
-  const { holdings, rule, quotesByEconomicId, nowIso = new Date().toISOString() } = input;
+  const {
+    holdings,
+    rule,
+    quotesByEconomicId,
+    nowIso = new Date().toISOString(),
+    maxReferenceAgeSec = DEFAULT_MAX_REFERENCE_AGE_SEC,
+  } = input;
 
   const holdingByEcon = new Map<string, HoldingPosition>();
   for (const h of holdings) {
@@ -217,6 +228,39 @@ export function compileRebalancePlan(input: {
         limitPrice: null,
         marketPrice: snap?.marketPrice ?? null,
         quotePrice: snap?.quotePrice ?? null,
+        driftBps: null,
+        estimatedSavingsUsd: 0,
+      };
+    }
+
+    const refAgeSec = getReferenceAgeSec(snap.marketPriceTimestamp, nowIso);
+    if (refAgeSec === null || refAgeSec > maxReferenceAgeSec) {
+      return {
+        economicAssetId: target.economicAssetId,
+        symbol: target.symbol,
+        name: target.name,
+        icon: snap.icon,
+        currentUsdCents,
+        targetUsdCents,
+        deltaCents,
+        currentWeightPct: Number(currentWeightPct.toFixed(2)),
+        targetWeightPct: Number(normalizedTargetPct.toFixed(2)),
+        weightDriftPct,
+        side,
+        action: "BLOCKED_STALE_REFERENCE",
+        reasonCode: "STALE_REFERENCE_PRICE",
+        reasonMessage:
+          refAgeSec === null
+            ? `Missing reference timestamp for ${target.symbol}. Rebalance leg held safely.`
+            : `Reference price for ${target.symbol} is ${refAgeSec}s old (max ${maxReferenceAgeSec}s). Rebalance leg held safely.`,
+        targetVenue: null,
+        targetAssetId: null,
+        orderType: null,
+        qtyUnit: null,
+        orderQty: null,
+        limitPrice: null,
+        marketPrice: snap.marketPrice,
+        quotePrice: snap.quotePrice,
         driftBps: null,
         estimatedSavingsUsd: 0,
       };

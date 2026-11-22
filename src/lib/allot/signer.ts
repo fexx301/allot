@@ -57,7 +57,11 @@ export function loadOrCreateBrowserVault(): LocalP256SignerVault {
 export function verifyPlanAgainstLocalRule(
   plan: CompiledPaydayPlan,
   localRule: PaycheckRule,
+  options?: { maxReferenceAgeSec?: number; nowIso?: string },
 ): { ok: true } | { ok: false; code: "SIGNER_REQUIRED"; reason: string } {
+  const maxRefAgeSec = options?.maxReferenceAgeSec ?? 180;
+  const nowMs = Date.parse(options?.nowIso ?? plan.compiledAt ?? new Date().toISOString());
+
   if (plan.cashFloorCents < localRule.cashFloorCents) {
     return {
       ok: false,
@@ -80,6 +84,16 @@ export function verifyPlanAgainstLocalRule(
           code: "SIGNER_REQUIRED",
           reason: `Leg ${leg.symbol} is missing a verified reference price. Signing refused.`,
         };
+      }
+      if (leg.marketPriceTimestamp && Number.isFinite(nowMs)) {
+        const tsMs = Date.parse(leg.marketPriceTimestamp);
+        if (!Number.isFinite(tsMs) || Math.round((nowMs - tsMs) / 1000) > maxRefAgeSec) {
+          return {
+            ok: false,
+            code: "SIGNER_REQUIRED",
+            reason: `Leg ${leg.symbol} carries a stale reference price timestamp. Signing refused.`,
+          };
+        }
       }
       if (leg.driftBps > localRule.maxDriftBps) {
         return {

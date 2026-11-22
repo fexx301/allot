@@ -210,7 +210,10 @@ export default function ReceiptDetailPage({
                         {shownDrift !== null && shownDrift !== undefined && (
                           <div className="text-[11px] text-[#625B54]">
                             {shownDrift >= 0 ? "+" : ""}
-                            {shownDrift.toFixed(1)} bps
+                            {shownDrift.toFixed(1)} bps{" "}
+                            <span className="text-[10px] text-[#701735]">
+                              ({isLive && exec?.fillPrice !== undefined ? "actual fill" : "preview quote"})
+                            </span>
                           </div>
                         )}
                       </td>
