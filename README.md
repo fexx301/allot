@@ -1,5 +1,7 @@
 # Allot — Non-Custodial Global 401(k) in U.S. Stocks
 
+**Live Demo (EU `fra1`):** [https://allot-ashen.vercel.app](https://allot-ashen.vercel.app) · **Verified Mainnet Base Receipt:** [`/receipt/rcpt_live_base_20261122`](https://allot-ashen.vercel.app/receipt/rcpt_live_base_20261122) · **Health:** [`/api/health`](https://allot-ashen.vercel.app/api/health)
+
 > **Route every USDC paycheck into 136 tokenized U.S. stocks on True Markets Gateway — never below your cash floor, never past your reference-price drift band, and never without your browser's P-256 signature.**
 
 Millions of remote engineers, designers, and contractors outside the U.S. already get paid in **USDC**. When a $3,500 invoice lands today, they face two bad options: leave 100% idle in USDC, or eat 3–5% FX off-ramp fees and fight restricted U.S. brokerage onboarding — or worse, click "Buy" on a weekend tokenized stock pool and absorb **+38 to +45 bps** of unanchored after-hours spread.
