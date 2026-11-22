@@ -22,10 +22,11 @@ export default function OrdersAndWalletPage() {
   const [loading, setLoading] = useState(true);
   const [statusMsg, setStatusMsg] = useState<string | null>(null);
 
-  // Cash floor withdrawal form
+  // Cash floor withdrawal & inline limit-edit state
   const [withdrawTo, setWithdrawTo] = useState("");
   const [withdrawAmount, setWithdrawAmount] = useState("1.00");
   const [withdrawAssetId, setWithdrawAssetId] = useState("");
+  const [editPriceMap, setEditPriceMap] = useState<Record<string, string>>({});
   const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
@@ -59,6 +60,132 @@ export default function OrdersAndWalletPage() {
   useEffect(() => {
     loadWallet();
   }, [loadWallet]);
+
+  async function handleModifyOrder(orderId: string) {
+    if (!data) return;
+    const nextPrice = editPriceMap[orderId]?.trim();
+    if (!nextPrice) return;
+    setSubmitting(true);
+    setStatusMsg(null);
+    try {
+      const res = await fetch("/api/orders/manage", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          action: "modify",
+          userId: data.userId,
+          orderId,
+          price: nextPrice,
+        }),
+      });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error || "Modify failed");
+      setStatusMsg(`Updated CLOB limit order ${orderId.slice(0, 10)}… to $${nextPrice}`);
+      await loadWallet();
+    } catch (err) {
+      setStatusMsg(err instanceof Error ? err.message : "Modify failed");
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  async function handleQuickSellToUsdc(bal: GatewayBalance) {
+    if (!vault || !data || !bal.asset_id) return;
+    setSubmitting(true);
+    setStatusMsg(null);
+    try {
+      const prepRes = await fetch("/api/orders/prepare", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          userId: data.userId,
+          orders: [
+            {
+              symbol: bal.symbol,
+              venue: bal.venue === "cefi" ? "cefi" : "defi",
+              asset_id: bal.asset_id,
+              qty: bal.available,
+              qty_unit: "base",
+              side: "sell",
+              type: "market",
+            },
+          ],
+        }),
+      });
+      const prep = await prepRes.json();
+      const first = prep.prepared?.[0];
+      if (!prepRes.ok || !first?.ok || !first.orderId) {
+        throw new Error(first?.error || prep.error || "Sell preparation failed");
+      }
+
+      const payloads: Array<{ payload: string }> = first.payloads ?? [];
+      const signatures = await Promise.all(
+        payloads.map((p) => stampGatewayPayload(vault, p.payload)),
+      );
+
+      const execRes = await fetch("/api/orders/execute", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          mode: "LIVE_GATEWAY",
+          userId: data.userId,
+          userHandle: wallet?.handle || "wallet",
+          signerPublicKey: vault.publicKeyCompressedHex,
+          planStamp: signatures[0] || "sell",
+          plan: {
+            planVersion: "allot.plan.v1",
+            depositEventId: `sell-${Date.now()}`,
+            compiledAt: new Date().toISOString(),
+            mode: "LIVE_GATEWAY",
+            incomingCents: 0,
+            existingCashCents: 0,
+            totalCashBeforeCents: 0,
+            cashFloorCents: 0,
+            protectedCashCents: 0,
+            allocatableSurplusCents: 0,
+            cashRetainedByRuleCents: 0,
+            planStatus: "READY_TO_SIGN",
+            refusalSummary: [],
+            legs: [],
+            totals: {
+              executableMarketCents: 0,
+              stagedLimitCents: 0,
+              carriedOverCents: 0,
+              blockedCents: 0,
+              estimatedSavingsUsd: 0,
+            },
+            ruleSnapshot: {
+              ruleId: "quick-sell",
+              label: "Sell to USDC",
+              cashFloorCents: 0,
+              maxDriftBps: 100,
+              minNotionalCents: 100,
+              autoStageClobLimit: false,
+              legs: [],
+            },
+            planHash: `sell-${first.orderId}`,
+          },
+          signedOrders: [
+            {
+              symbol: bal.symbol,
+              venue: bal.venue === "cefi" ? "cefi" : "defi",
+              orderType: "market",
+              orderId: first.orderId,
+              requestedUsd: Number(bal.usd_value || 0),
+              signatures,
+            },
+          ],
+        }),
+      });
+      if (!execRes.ok) throw new Error("Sell execution failed");
+      setStatusMsg(`Sold ${bal.available} ${bal.symbol} back to USDC (order ${first.orderId})`);
+      await loadWallet();
+    } catch (err) {
+      setStatusMsg(err instanceof Error ? err.message : "Sell failed");
+    } finally {
+      setSubmitting(false);
+    }
+  }
 
   async function handleCancelOrder(orderId: string) {
     if (!vault || !data) return;
@@ -207,10 +334,21 @@ export default function OrdersAndWalletPage() {
                         {b.chain || b.venue || "cefi"}
                       </div>
                     </div>
-                    <div className="text-right font-mono tabular-nums">
-                      <div className="text-sm font-semibold text-slate-900">{b.available}</div>
-                      {b.usd_value && (
-                        <div className="text-xs text-stone-500">${Number(b.usd_value).toFixed(2)}</div>
+                    <div className="flex items-center gap-3 text-right font-mono tabular-nums">
+                      <div>
+                        <div className="text-sm font-semibold text-slate-900">{b.available}</div>
+                        {b.usd_value && (
+                          <div className="text-xs text-stone-500">${Number(b.usd_value).toFixed(2)}</div>
+                        )}
+                      </div>
+                      {b.symbol.toUpperCase() !== "USDC" && b.asset_id && Number(b.available) > 0 && (
+                        <button
+                          onClick={() => handleQuickSellToUsdc(b)}
+                          disabled={submitting}
+                          className="rounded-lg border border-[#E5E4DE] bg-[#F7F6F2] px-2.5 py-1.5 font-sans text-xs font-medium text-slate-800 hover:bg-stone-200/70 disabled:opacity-40"
+                        >
+                          Sell to USDC
+                        </button>
                       )}
                     </div>
                   </div>
@@ -250,14 +388,32 @@ export default function OrdersAndWalletPage() {
                         </div>
                       </div>
                       {o.status === "active" && (
-                        <button
-                          onClick={() => handleCancelOrder(id)}
-                          disabled={submitting}
-                          className="inline-flex items-center gap-1 rounded-lg border border-red-200 bg-white px-2.5 py-1.5 text-xs font-medium text-red-700 hover:bg-red-50"
-                        >
-                          <XCircle className="h-3.5 w-3.5" />
-                          Sign &amp; Cancel
-                        </button>
+                        <div className="flex flex-wrap items-center gap-1.5">
+                          <input
+                            type="text"
+                            placeholder={o.price || "New $"}
+                            value={editPriceMap[id] ?? ""}
+                            onChange={(e) =>
+                              setEditPriceMap((prev) => ({ ...prev, [id]: e.target.value }))
+                            }
+                            className="w-20 rounded-lg border border-[#E5E4DE] bg-white px-2 py-1 font-mono text-xs text-slate-900 outline-none focus:border-slate-900"
+                          />
+                          <button
+                            onClick={() => handleModifyOrder(id)}
+                            disabled={submitting || !editPriceMap[id]}
+                            className="rounded-lg border border-[#E5E4DE] bg-white px-2.5 py-1.5 text-xs font-medium text-slate-800 hover:bg-stone-100 disabled:opacity-40"
+                          >
+                            PATCH Price
+                          </button>
+                          <button
+                            onClick={() => handleCancelOrder(id)}
+                            disabled={submitting}
+                            className="inline-flex items-center gap-1 rounded-lg border border-red-200 bg-white px-2.5 py-1.5 text-xs font-medium text-red-700 hover:bg-red-50"
+                          >
+                            <XCircle className="h-3.5 w-3.5" />
+                            Sign &amp; Cancel
+                          </button>
+                        </div>
                       )}
                     </div>
                   );

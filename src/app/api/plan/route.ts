@@ -70,7 +70,8 @@ export async function POST(req: NextRequest) {
       Math.min(incomingCents, incomingCents + existingCashCents - rule.cashFloorCents),
     );
 
-    // Fetch live Market Data price + live Gateway POST /quotes for every leg in parallel
+    // Fetch live Market Data price + 1h sparkline + live Gateway POST /quotes for every leg in parallel
+    const sparklinesByEconomicId: Record<string, number[]> = {};
     const snapshots = await Promise.all(
       resolvedLegs.map(async ({ config, paired: asset }): Promise<[string, LiveAssetQuoteSnapshot]> => {
         if (!asset) {
@@ -118,6 +119,10 @@ export async function POST(req: NextRequest) {
             : Promise.resolve({ ok: false as const, err: "No DeFi listing available for quote" }),
         ]);
 
+        if (marketSnap?.points?.length) {
+          sparklinesByEconomicId[config.economicAssetId] = marketSnap.points.map((p) => p.price);
+        }
+
         return [
           config.economicAssetId,
           {
@@ -153,7 +158,7 @@ export async function POST(req: NextRequest) {
       mode: body.mode,
     });
 
-    return NextResponse.json({ plan });
+    return NextResponse.json({ plan, sparklinesByEconomicId });
   } catch (err) {
     if (err instanceof z.ZodError) {
       return NextResponse.json({ error: "Invalid plan request", issues: err.issues }, { status: 400 });

@@ -110,6 +110,71 @@ function fmtUsd(cents: number): string {
   })}`;
 }
 
+function MiniSparkline({ points, breached }: { points?: number[]; breached: boolean }) {
+  if (!points || points.length < 2) return null;
+  const min = Math.min(...points);
+  const max = Math.max(...points);
+  const span = max - min || 1;
+  const w = 68;
+  const h = 22;
+  const d = points
+    .map((v, i) => {
+      const x = (i / (points.length - 1)) * w;
+      const y = h - ((v - min) / span) * (h - 4) - 2;
+      return `${i === 0 ? "M" : "L"}${x.toFixed(1)},${y.toFixed(1)}`;
+    })
+    .join(" ");
+  return (
+    <svg width={w} height={h} viewBox={`0 0 ${w} ${h}`} className="shrink-0 overflow-visible">
+      <path
+        d={d}
+        fill="none"
+        stroke={breached ? "#B45309" : "#047857"}
+        strokeWidth="1.75"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
+function SpreadGauge({ driftBps, capBps }: { driftBps: number; capBps: number }) {
+  const maxScale = Math.max(80, capBps * 1.6, Math.abs(driftBps) * 1.25);
+  const clampedDrift = Math.max(0, Math.min(maxScale, driftBps));
+  const capPct = Math.min(98, (capBps / maxScale) * 100);
+  const driftPct = Math.min(98, (clampedDrift / maxScale) * 100);
+  const breached = driftBps > capBps;
+
+  return (
+    <div className="mt-2.5">
+      <div className="flex items-center justify-between font-mono text-[10px] text-stone-500">
+        <span>0 bps (Market)</span>
+        <span className={breached ? "font-semibold text-amber-800" : "font-semibold text-emerald-700"}>
+          Quote {driftBps >= 0 ? "+" : ""}
+          {driftBps.toFixed(1)} bps vs cap {capBps} bps
+        </span>
+      </div>
+      <div className="relative mt-1 h-2 w-full rounded-full bg-stone-200">
+        <div
+          className="h-full rounded-l-full bg-emerald-200/80"
+          style={{ width: `${capPct}%` }}
+        />
+        <div
+          className="absolute top-[-2px] h-3 w-0.5 bg-slate-900"
+          style={{ left: `${capPct}%` }}
+          title={`Max Drift Cap: ${capBps} bps`}
+        />
+        <div
+          className={`absolute top-1/2 h-3 w-3 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-white shadow-xs ${
+            breached ? "bg-amber-600" : "bg-emerald-600"
+          }`}
+          style={{ left: `${Math.max(2, driftPct)}%` }}
+        />
+      </div>
+    </div>
+  );
+}
+
 export function PaydayStudio() {
   const router = useRouter();
   const [catalog, setCatalog] = useState<CatalogResponse | null>(null);
@@ -162,6 +227,7 @@ export function PaydayStudio() {
 
   // Plan & Execution state
   const [plan, setPlan] = useState<CompiledPaydayPlan | null>(null);
+  const [sparklines, setSparklines] = useState<Record<string, number[]>>({});
   const [planLoading, setPlanLoading] = useState(false);
   const [planError, setPlanError] = useState<string | null>(null);
   const [simulateTamper, setSimulateTamper] = useState(false);
@@ -250,6 +316,7 @@ export function PaydayStudio() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Plan compilation failed");
       setPlan(data.plan);
+      if (data.sparklinesByEconomicId) setSparklines(data.sparklinesByEconomicId);
     } catch (err) {
       setPlanError(err instanceof Error ? err.message : "Failed to compile plan");
     } finally {
@@ -1033,16 +1100,26 @@ export function PaydayStudio() {
                         </div>
                       </div>
 
-                      <span
-                        className={`rounded-lg border px-2 py-1 font-mono text-[10px] font-semibold ${badgeStyle}`}
-                      >
-                        {leg.reasonCode === "APPROVED"
-                          ? "APPROVED · DEFI MARKET"
-                          : leg.action === "STAGE_CEFI_LIMIT"
-                            ? "PRICE_DRIFT_GUARDED → CEFI CLOB LIMIT"
-                            : leg.reasonCode}
-                      </span>
+                      <div className="flex items-center gap-3">
+                        <MiniSparkline
+                          points={sparklines[leg.economicAssetId]}
+                          breached={leg.driftBps !== null && leg.driftBps > maxDriftBps}
+                        />
+                        <span
+                          className={`rounded-lg border px-2 py-1 font-mono text-[10px] font-semibold ${badgeStyle}`}
+                        >
+                          {leg.reasonCode === "APPROVED"
+                            ? "APPROVED · DEFI MARKET"
+                            : leg.action === "STAGE_CEFI_LIMIT"
+                              ? "PRICE_DRIFT_GUARDED → CEFI CLOB LIMIT"
+                              : leg.reasonCode}
+                        </span>
+                      </div>
                     </div>
+
+                    {leg.driftBps !== null && leg.reasonCode !== "CASH_FLOOR_PROTECTED" && (
+                      <SpreadGauge driftBps={leg.driftBps} capBps={maxDriftBps} />
+                    )}
 
                     <p className="mt-2.5 text-xs leading-relaxed text-stone-700">
                       {leg.reasonMessage}

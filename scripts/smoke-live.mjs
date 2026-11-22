@@ -68,6 +68,29 @@ async function main() {
     throw new Error(`Expected REFUSED_CASH_FLOOR, got ${p2.planStatus}`);
   }
   console.log(`✓ POST /api/plan ($850 vs $1,000 floor) -> ${p2.planStatus} (${p2.refusalSummary.join(",")})`);
+
+  // Scenario 3: Live Drift Rebalancer
+  const rebRes = await fetch(`${BASE}/api/rebalance`, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({
+      driftThresholdPct: 3,
+      maxSpreadBps: 25,
+      minTradeUsd: 5,
+      autoStageClobLimit: true,
+      holdings: [
+        { symbol: "NVDAC", name: "NVIDIA", qty: 35, targetWeightPct: 30 },
+        { symbol: "AAPLC", name: "Apple", qty: 10.5, targetWeightPct: 35 },
+        { symbol: "SPCXC", name: "SpaceX", qty: 11, targetWeightPct: 20 },
+        { symbol: "TSLAC", name: "Tesla", qty: 4.5, targetWeightPct: 15 },
+      ],
+    }),
+  });
+  const { plan: reb } = await rebRes.json();
+  if (!rebRes.ok) throw new Error("rebalance failed");
+  console.log(
+    `✓ POST /api/rebalance -> status=${reb.status} total=$${(reb.totalPortfolioCents / 100).toFixed(2)} sell=$${(reb.totalSellCents / 100).toFixed(2)} buy=$${(reb.totalBuyCents / 100).toFixed(2)} saved=$${reb.estimatedSavingsUsd}`,
+  );
 }
 
 main().catch((err) => {

@@ -2,13 +2,14 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { ArrowUpRight, FileCheck2, Landmark, Layers, Link2, ShieldCheck } from "lucide-react";
+import { ArrowUpRight, FileCheck2, Landmark, Layers, Link2, Scale, ShieldCheck } from "lucide-react";
 
 const NAV_ITEMS = [
   { href: "/", label: "Payday Studio", icon: Layers },
+  { href: "/rebalance", label: "Drift Rebalancer", icon: Scale },
   { href: "/pay/demo-engineer", label: "USDC Paylink", icon: Link2 },
-  { href: "/orders", label: "Wallet & CLOB Orders", icon: Landmark },
-  { href: "/receipts", label: "Execution Receipts", icon: FileCheck2 },
+  { href: "/orders", label: "Wallet & CLOB", icon: Landmark },
+  { href: "/receipts", label: "Receipts", icon: FileCheck2 },
 ];
 
 export function TopNav() {

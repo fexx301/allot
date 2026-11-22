@@ -17,7 +17,8 @@ Millions of remote engineers, designers, and contractors outside the U.S. alread
    - **$32 Micro-Payout (`55 bps` cap):** Triggers **`BELOW_MIN_NOTIONAL`** carryover on the 4% leg ($1.28) while allowing tight-spread legs to route as `DEFI MARKET`.
 3. **Test Client-Side P-256 Signer Refusal:** Toggle **"Test Server Tamper Refusal"** — Allot simulates a compromised server lowering your Cash Floor; the browser signer detects the rule violation and refuses to sign (`SIGNER_REQUIRED`).
 4. **Sign Locally & Inspect Receipt (`/receipt/[id]`):** Click **"Sign Locally (P-256) & Mint Preview Receipt"** to stamp the canonical SHA-256 `plan_hash` with your browser's ECDSA P-256 key (`SIGNATURE_SCHEME_TK_API_P256`) and inspect the exportable Best-Execution Payday Statement.
-5. **Provision a Real Gateway Wallet & Shareable Paylink (`/pay/[handle]` & `/orders`):** Click **"Create Non-Custodial Wallet"** to call live `POST /v1/account/organizations/{id}/users` with your browser's compressed P-256 public key, get real Solana + Base USDC deposit addresses, share `/pay/[handle]`, manage resting CeFi CLOB limit orders, and withdraw protected USDC via `POST /v1/gateway/transfers`.
+5. **Inspect Live Drift Rebalancing (`/rebalance`):** Test a post-earnings NVIDIA rally scenario — Allot trims overweight shares first so USDC proceeds fund underweight buys, skips minor noise inside your ±3% no-churn band, and routes wide-spread legs to CeFi CLOB limit orders.
+6. **Provision a Real Gateway Wallet & Shareable Paylink (`/pay/[handle]` & `/orders`):** Click **"Create Non-Custodial Wallet"** to call live `POST /v1/account/organizations/{id}/users` with your browser's compressed P-256 public key, get real Solana + Base USDC deposit addresses, share `/pay/[handle]`, modify (`PATCH`) or cancel resting CeFi CLOB limit orders, sell holdings back to USDC, and withdraw protected USDC via `POST /v1/gateway/transfers`.
 
 ---
 
