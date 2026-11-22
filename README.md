@@ -1,3 +1,7 @@
+<p align="left">
+  <img src="public/allot-logo.svg" alt="Allot — Non-Custodial Global 401(k) in U.S. Stocks" height="52" />
+</p>
+
 # Allot — Non-Custodial Global 401(k) in U.S. Stocks
 
 **Live Demo (EU `fra1`):** [https://allot-ashen.vercel.app](https://allot-ashen.vercel.app) · **Verified Mainnet Base Receipt:** [`/receipt/rcpt_live_base_20261122`](https://allot-ashen.vercel.app/receipt/rcpt_live_base_20261122) · **Health:** [`/api/health`](https://allot-ashen.vercel.app/api/health)

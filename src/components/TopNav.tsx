@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { ArrowUpRight, FileCheck2, Landmark, Layers, Link2, Scale, ShieldCheck } from "lucide-react";
+import { ArrowUpRight, FileCheck2, Landmark, Layers, Link2, Scale } from "lucide-react";
 
 const NAV_ITEMS = [
   { href: "/", label: "Payday Studio", icon: Layers },
@@ -20,17 +20,12 @@ export function TopNav() {
       <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
         <div className="flex items-center gap-6">
           <Link href="/" className="group flex items-center gap-2.5">
-            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-slate-900 text-white shadow-xs transition group-hover:bg-emerald-800">
-              <ShieldCheck className="h-4 w-4" />
-            </div>
-            <div className="flex flex-col">
-              <span className="text-base font-semibold tracking-tight text-slate-900 leading-none">
-                Allot
-              </span>
-              <span className="mt-0.5 text-[10px] font-medium uppercase tracking-widest text-stone-500">
-                Global 401(k) · True Markets
-              </span>
-            </div>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src="/allot-logo.svg"
+              alt="Allot — Global 401(k) on True Markets"
+              className="h-8 w-auto transition opacity-95 group-hover:opacity-100"
+            />
           </Link>
 
           <nav className="hidden items-center gap-1 md:flex">

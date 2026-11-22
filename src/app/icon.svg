@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="Allot">
+  <rect width="512" height="512" rx="112" fill="#F7F6F2"/>
+  <g fill="#701735" fill-rule="evenodd" transform="translate(22 36) scale(0.78)">
+    <path d="
+      M75 182 354 142 357 151 330 190 374 214 342 260 384 285
+      349 329 386 349 386 388 75 431 Z
+      M110 248 315 219 315 254 110 283 Z
+      M110 325 264 304 264 338 110 359 Z"/>
+    <path d="
+      M354 115 508 64 553 298 398 374 425 331 387 303
+      417 256 377 231 406 181 367 162 Z"/>
+  </g>
+</svg>

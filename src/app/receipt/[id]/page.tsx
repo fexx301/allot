@@ -88,6 +88,8 @@ export default function ReceiptDetailPage({
         <div className="border-b border-[#E5E4DE] bg-[#F7F6F2] p-6">
           <div className="flex flex-wrap items-start justify-between gap-4">
             <div>
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src="/allot-logo.svg" alt="Allot" className="mb-3 h-7 w-auto" />
               <span
                 className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 font-mono text-[11px] font-semibold ${
                   receipt.mode === "LIVE_GATEWAY"

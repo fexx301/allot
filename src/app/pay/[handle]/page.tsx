@@ -98,6 +98,8 @@ export default function PaylinkPage({
         <div className="border-b border-[#E5E4DE] bg-[#F7F6F2]/70 p-6">
           <div className="flex flex-wrap items-start justify-between gap-4">
             <div>
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src="/allot-logo.svg" alt="Allot" className="mb-3 h-7 w-auto" />
               <div className="font-mono text-xs uppercase tracking-wider text-stone-500">
                 USDC Invoice &amp; Paycheck Link · /pay/{profile.handle}
               </div>
