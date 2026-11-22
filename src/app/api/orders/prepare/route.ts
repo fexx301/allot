@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
+import { DEFAULT_PROBE_USER_ID } from "@/lib/allot/store";
 import { getGatewayClient, TrueMarketsApiError } from "@/lib/tm-gateway/client";
 
 export const dynamic = "force-dynamic";
@@ -26,6 +27,16 @@ const PrepareSchema = z.object({
 export async function POST(req: NextRequest) {
   try {
     const body = PrepareSchema.parse(await req.json());
+    if (body.userId === DEFAULT_PROBE_USER_ID) {
+      return NextResponse.json(
+        {
+          error:
+            "This funded showcase wallet is read-only on the public demo (its P-256 signer key is offline). Create your own non-custodial wallet to place live orders.",
+          code: "READ_ONLY_DEMO_WALLET",
+        },
+        { status: 403 },
+      );
+    }
     const client = getGatewayClient();
 
     const prepared = await Promise.all(

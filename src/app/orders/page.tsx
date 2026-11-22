@@ -483,10 +483,11 @@ export default function OrdersAndWalletPage() {
                         {b.symbol.toUpperCase() !== "USDC" && b.asset_id && Number(b.available) > 0 && (
                           <button
                             onClick={() => handleQuickSellToUsdc(b)}
-                            disabled={submitting}
+                            disabled={submitting || !wallet}
+                            title={!wallet ? "Showcase wallet is read-only (signer key offline)" : undefined}
                             className="rounded-lg border border-[#E5E4DE] bg-[#F7F6F2] px-2.5 py-1.5 font-sans text-xs font-medium text-slate-800 hover:bg-stone-200/70 disabled:opacity-40"
                           >
-                            Sell to USDC
+                            {wallet ? "Sell to USDC" : "Locked (Demo)"}
                           </button>
                         )}
                       </div>
@@ -638,11 +639,11 @@ export default function OrdersAndWalletPage() {
 
               <button
                 type="submit"
-                disabled={submitting || !withdrawAssetId || !withdrawTo}
+                disabled={submitting || !withdrawAssetId || !withdrawTo || !wallet}
                 className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-slate-900 px-4 py-2.5 text-sm font-medium text-white transition hover:bg-emerald-800 disabled:opacity-40"
               >
                 {submitting && <Loader2 className="h-4 w-4 animate-spin" />}
-                Sign with P-256 &amp; Send USDC
+                {wallet ? "Sign with P-256 & Send USDC" : "Read-Only Showcase Wallet (Signer Offline)"}
                 <ArrowUpRight className="h-4 w-4" />
               </button>
             </form>
