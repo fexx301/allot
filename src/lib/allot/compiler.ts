@@ -61,30 +61,64 @@ export function allocateCentsLargestRemainder(
   return { allocations, retainedCashCents };
 }
 
-/**
- * Quantize a CeFi CLOB limit price to True Markets exchange tick increments.
- * Follows standard price-bucket tick sizing (0.01 for >= $1 equities, 0.001 below $1).
- */
-export function quantizeTickPrice(price: number): string {
-  if (!Number.isFinite(price) || price <= 0) {
-    throw new Error(`Invalid price for tick quantization: ${price}`);
-  }
-  const tick = price >= 1 ? 0.01 : 0.001;
-  const decimals = price >= 1 ? 2 : 3;
-  const floored = Math.floor(price / tick) * tick;
-  return floored.toFixed(decimals);
+export interface CefiIncrementBucket {
+  bucket: number;
+  lower: number;
+  tickSize: number;
+  tickDecimals: number;
+  lotSize: number;
+  lotDecimals: number;
+  minNotionalUsd: number;
 }
 
 /**
- * Quantize base quantity for CeFi CLOB limit orders (4 decimal places for fractional equities).
+ * Exact 9-bucket True Markets CeFi CLOB increment schedule
+ * (verified from https://docs.truemarkets.co/documentation/increment-sizes.md).
+ */
+export const TRUE_MARKETS_CEFI_BUCKETS: CefiIncrementBucket[] = [
+  { bucket: 1, lower: 500_000, tickSize: 1, tickDecimals: 0, lotSize: 0.0000001, lotDecimals: 7, minNotionalUsd: 1 },
+  { bucket: 2, lower: 100_000, tickSize: 0.5, tickDecimals: 1, lotSize: 0.000001, lotDecimals: 6, minNotionalUsd: 1 },
+  { bucket: 3, lower: 10_000, tickSize: 0.1, tickDecimals: 1, lotSize: 0.00001, lotDecimals: 5, minNotionalUsd: 1 },
+  { bucket: 4, lower: 1_000, tickSize: 0.01, tickDecimals: 2, lotSize: 0.0001, lotDecimals: 4, minNotionalUsd: 1 },
+  { bucket: 5, lower: 10, tickSize: 0.001, tickDecimals: 3, lotSize: 0.001, lotDecimals: 3, minNotionalUsd: 1 },
+  { bucket: 6, lower: 0.1, tickSize: 0.0001, tickDecimals: 4, lotSize: 0.1, lotDecimals: 1, minNotionalUsd: 1 },
+  { bucket: 7, lower: 0.001, tickSize: 0.000001, tickDecimals: 6, lotSize: 10, lotDecimals: 0, minNotionalUsd: 1 },
+  { bucket: 8, lower: 0.00001, tickSize: 0.00000001, tickDecimals: 8, lotSize: 1_000, lotDecimals: 0, minNotionalUsd: 1 },
+  { bucket: 9, lower: 0, tickSize: 0.0000000001, tickDecimals: 10, lotSize: 100_000, lotDecimals: 0, minNotionalUsd: 1 },
+];
+
+export function getCefiIncrementBucket(price: number): CefiIncrementBucket {
+  if (!Number.isFinite(price) || price <= 0) {
+    throw new Error(`Invalid price for True Markets increment bucket: ${price}`);
+  }
+  for (const b of TRUE_MARKETS_CEFI_BUCKETS) {
+    if (price >= b.lower) return b;
+  }
+  return TRUE_MARKETS_CEFI_BUCKETS[TRUE_MARKETS_CEFI_BUCKETS.length - 1];
+}
+
+/**
+ * Quantize a CeFi CLOB limit price strictly to True Markets' exchange tick bucket.
+ * Example: Bucket 5 ($10–$999.999 equities) -> tick 0.001 (3 decimals).
+ */
+export function quantizeTickPrice(price: number): string {
+  const b = getCefiIncrementBucket(price);
+  const steps = Math.floor(price / b.tickSize + 1e-12);
+  return (steps * b.tickSize).toFixed(b.tickDecimals);
+}
+
+/**
+ * Quantize base quantity strictly to True Markets' exchange lot increment for the limit price bucket.
+ * Example: Bucket 5 ($10–$999.999 equities) -> lot 0.001 (3 decimals).
  */
 export function quantizeBaseQty(notionalUsd: number, limitPrice: number): string {
   if (!Number.isFinite(notionalUsd) || !Number.isFinite(limitPrice) || limitPrice <= 0) {
     return "0";
   }
+  const b = getCefiIncrementBucket(limitPrice);
   const raw = notionalUsd / limitPrice;
-  const floored = Math.floor(raw * 10_000) / 10_000;
-  return floored.toFixed(4);
+  const steps = Math.floor(raw / b.lotSize + 1e-12);
+  return (steps * b.lotSize).toFixed(b.lotDecimals);
 }
 
 export function computeDriftBps(quotePrice: number, marketPrice: number): number {

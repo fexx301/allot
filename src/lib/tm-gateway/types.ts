@@ -92,6 +92,7 @@ export interface GatewayOrderPayload {
 
 export interface GatewayCreateOrderRequest {
   asset_id: string;
+  venue?: GatewayVenue | "smart";
   qty: string;
   qty_unit: GatewayQtyUnit;
   side: GatewayOrderSide;

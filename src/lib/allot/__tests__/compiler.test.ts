@@ -240,9 +240,16 @@ describe("Allot Deterministic Split Compiler", () => {
     expect(decoded.signature).toMatch(/^[0-9a-f]+$/i);
   });
 
-  it("quantizes tick prices and lot sizes cleanly", () => {
-    expect(quantizeTickPrice(347.559)).toBe("347.55");
-    expect(quantizeBaseQty(500, 129.89)).toBe("3.8494");
+  it("quantizes tick prices and lot sizes strictly to True Markets 9-bucket CeFi schedule", () => {
+    // Bucket 5 ($10 - $999.999): tick 0.001, lot 0.001
+    expect(quantizeTickPrice(347.5598)).toBe("347.559");
+    expect(quantizeBaseQty(500, 129.89)).toBe("3.849");
+    // Bucket 4 ($1,000 - $9,999.99): tick 0.01, lot 0.0001
+    expect(quantizeTickPrice(1250.459)).toBe("1250.45");
+    expect(quantizeBaseQty(500, 1250.45)).toBe("0.3998");
+    // Bucket 6 ($0.10 - $9.9999): tick 0.0001, lot 0.1
+    expect(quantizeTickPrice(4.12349)).toBe("4.1234");
+    expect(quantizeBaseQty(10, 4.1234)).toBe("2.4");
     expect(computeDriftBps(348.5528, 347.2132)).toBeCloseTo(38.58, 1);
   });
 

@@ -44,6 +44,7 @@ export async function POST(req: NextRequest) {
         try {
           const res = await client.createOrder(body.userId, {
             asset_id: leg.asset_id,
+            venue: leg.venue,
             qty: leg.qty,
             qty_unit: leg.qty_unit,
             side: leg.side,
@@ -75,13 +76,16 @@ export async function POST(req: NextRequest) {
           };
         } catch (err) {
           if (err instanceof TrueMarketsApiError) {
+            const isKycGate = err.status === 403 && err.code === "kyc_required";
             return {
               symbol: leg.symbol,
               venue: leg.venue,
               type: leg.type,
               ok: false,
-              error: err.message,
-              code: err.code,
+              error: isKycGate
+                ? `CeFi CLOB limit orders require True Markets KYC verification (403 kyc_required). Your USDC for ${leg.symbol} remains held safely rather than taking an unguarded wide DeFi fill.`
+                : err.message,
+              code: isKycGate ? "CEFI_KYC_REQUIRED" : err.code,
               requestId: err.requestId,
             };
           }

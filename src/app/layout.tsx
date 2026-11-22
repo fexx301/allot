@@ -24,9 +24,24 @@ const jetbrainsMono = JetBrains_Mono({
 });
 
 export const metadata: Metadata = {
+  metadataBase: new URL("https://allot-ashen.vercel.app"),
   title: "Allot — Non-Custodial Global 401(k) in U.S. Stocks",
   description:
     "Auto-split every USDC paycheck into 136 tokenized U.S. stocks on True Markets Gateway — never below your cash floor, never past your reference-price drift band.",
+  openGraph: {
+    title: "Allot — Non-Custodial Global 401(k) in U.S. Stocks",
+    description:
+      "Keep your rent safe. Put the rest into 136 tokenized U.S. stocks on True Markets Gateway with cash-floor protection, CeFi CLOB drift routing, and browser P-256 signing.",
+    url: "https://allot-ashen.vercel.app",
+    siteName: "Allot",
+    type: "website",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Allot — Non-Custodial Global 401(k) in U.S. Stocks",
+    description:
+      "Auto-split every USDC paycheck into 136 tokenized U.S. stocks on True Markets Gateway.",
+  },
 };
 
 export default function RootLayout({
