@@ -342,19 +342,39 @@ export function PaydayStudio() {
     // Mid-flight price-move refusal demo: exercises the REAL client verifyPreparedOrderQuote()
     // pre-sign gate before any P-256 signature is emitted.
     if (simulatePriceMove) {
-      const targetLeg = plan.legs.find(
+      const marketLeg = plan.legs.find(
         (l) =>
           l.action === "EXECUTE_DEFI_MARKET" &&
           l.marketPrice !== null &&
           l.quotePrice !== null,
       );
+      // On weekends live spreads often exceed the default 0.25% cap (all legs staged as
+      // limit orders). Fall back to the first allocated leg with a live market price using an
+      // in-cap preview baseline so the demo still exercises verifyPreparedOrderQuote().
+      const targetLeg =
+        marketLeg ??
+        plan.legs.find(
+          (l) =>
+            (l.action === "STAGE_CEFI_LIMIT" || l.action === "BLOCKED_DRIFT_NO_CLOB") &&
+            l.effectiveCents > 0 &&
+            l.marketPrice !== null,
+        );
       if (!targetLeg || targetLeg.marketPrice === null) {
         setExecMessage({
           type: "err",
-          text: "No approved market leg in this plan to test a mid-flight jump — switch to $3,500 Salary or raise the spread cap so at least one stock is approved for Instant Fill.",
+          text: "Nothing is scheduled to buy in this plan — switch to $3,500 Remote Salary to test a price jump before signing.",
         });
         return;
       }
+
+      const previewDriftBps =
+        marketLeg && marketLeg.driftBps !== null
+          ? marketLeg.driftBps
+          : Number(Math.min(10, currentRule.maxDriftBps / 2).toFixed(1));
+      const previewQuotePrice =
+        marketLeg && marketLeg.quotePrice !== null
+          ? marketLeg.quotePrice
+          : Number((targetLeg.marketPrice * (1 + previewDriftBps / 10_000)).toFixed(4));
 
       const jumpedPrice = Number(
         (targetLeg.marketPrice * (1 + (currentRule.maxDriftBps + 40) / 10_000)).toFixed(4),
@@ -378,8 +398,8 @@ export function PaydayStudio() {
           name: targetLeg.name,
           allocatedCents: targetLeg.effectiveCents,
           benchmarkPrice: targetLeg.marketPrice,
-          previewQuotePrice: targetLeg.quotePrice,
-          previewDriftBps: targetLeg.driftBps,
+          previewQuotePrice,
+          previewDriftBps,
           preparedQuotePrice: check.preparedPrice,
           preparedDriftBps: check.preparedDriftBps,
           capBps: currentRule.maxDriftBps,
@@ -387,6 +407,7 @@ export function PaydayStudio() {
           reason: check.reason,
           simulated: true,
         });
+        document.getElementById("sign-card")?.scrollIntoView({ behavior: "smooth", block: "nearest" });
         void compileLivePlan();
         return;
       }
