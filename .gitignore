@@ -1,0 +1,12 @@
+node_modules/
+.next/
+out/
+coverage/
+.env
+.env.local
+.env*.local
+*.pem
+*org-key*.json
+*signer-key*.json
+.data/
+.DS_Store
