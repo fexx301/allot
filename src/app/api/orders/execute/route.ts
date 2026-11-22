@@ -12,7 +12,7 @@ export const dynamic = "force-dynamic";
 const ExecuteSchema = z.object({
   mode: z.enum(["LIVE_GATEWAY", "LIVE_QUOTES_PREVIEW"]),
   userId: z.string().min(1),
-  userHandle: z.string().default("demo-engineer"),
+  userHandle: z.string().default("femi"),
   signerPublicKey: z.string().min(10),
   planStamp: z.string().min(10),
   plan: z.any(),

@@ -584,7 +584,7 @@ export function PaydayStudio() {
         body: JSON.stringify({
           mode: useLive ? "LIVE_GATEWAY" : "LIVE_QUOTES_PREVIEW",
           userId: connectedWallet?.userId || "98f6006a-b96a-4b77-a9e8-69c1c85c308c",
-          userHandle: connectedWallet?.handle || "demo-engineer",
+          userHandle: connectedWallet?.handle || "femi",
           signerPublicKey: vault.publicKeyCompressedHex,
           planStamp,
           plan,
@@ -654,7 +654,7 @@ export function PaydayStudio() {
             Verified Live Base Receipt
           </Link>
           <Link
-            href={connectedWallet?.sharePath || `/pay/${connectedWallet?.handle || "demo-engineer"}`}
+            href={connectedWallet?.sharePath || `/pay/${connectedWallet?.handle || "femi"}`}
             className="inline-flex items-center justify-center gap-1.5 rounded-full border border-[#E5E1D8] bg-white px-4 py-2.5 text-xs font-medium text-[#171412] transition hover:border-[#701735]/40"
           >
             Share Paylink

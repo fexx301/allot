@@ -66,7 +66,7 @@ const VERIFIED_LIVE_RECEIPT: PaydayReceipt = {
   receiptId: "rcpt_live_base_20261122",
   createdAt: "2026-11-22T08:38:50.133Z",
   mode: "LIVE_GATEWAY",
-  userHandle: "demo-engineer",
+  userHandle: "femi",
   userId: DEFAULT_PROBE_USER_ID,
   signerPublicKey: "03ed4fdb53b5bd570baa5a74d0d237222964e82ceee8f90ae258909ef5e605da6b",
   planHash: "7de2cb7606440cc1c348853952cd572a90c6fc9e7773920e468e59b60ca25588",
@@ -192,20 +192,23 @@ const VERIFIED_LIVE_RECEIPT: PaydayReceipt = {
 };
 
 function createInitialState(): PersistedState {
+  const femiProfile: PaylinkProfile = {
+    handle: "femi",
+    displayName: "Femi Ogunsanya",
+    roleTitle: "Software Engineer · Paid in USDC",
+    userId: DEFAULT_PROBE_USER_ID,
+    solanaAddress: "CEMXtqVJGK5tYvBw9PeVLwTz2dKbkhxQhq31jVVRLVV",
+    evmAddress: "0x7DAe0C02233864D8748Ce54e5e658148fC259ac7",
+    signerFingerprint: "03ed4fdb…5e605da6b",
+    defaultInvoiceUsd: 3500,
+    rule: DEFAULT_RULE,
+    createdAt: "2026-11-22T08:04:00Z",
+  };
+
   return {
     paylinks: {
-      "demo-engineer": {
-        handle: "demo-engineer",
-        displayName: "Adaeze Okafor",
-        roleTitle: "Staff Product Engineer · Lagos (Paid in USDC)",
-        userId: DEFAULT_PROBE_USER_ID,
-        solanaAddress: "CEMXtqVJGK5tYvBw9PeVLwTz2dKbkhxQhq31jVVRLVV",
-        evmAddress: "0x7DAe0C02233864D8748Ce54e5e658148fC259ac7",
-        signerFingerprint: "03ed4fdb…5e605da6b",
-        defaultInvoiceUsd: 3500,
-        rule: DEFAULT_RULE,
-        createdAt: "2026-11-22T08:04:00Z",
-      },
+      femi: femiProfile,
+      "demo-engineer": femiProfile,
     },
     receipts: {
       [VERIFIED_LIVE_RECEIPT.receiptId]: VERIFIED_LIVE_RECEIPT,

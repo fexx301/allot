@@ -30,9 +30,9 @@ export function WalletModal({
   connectedWallet,
   onConnected,
 }: WalletModalProps) {
-  const [displayName, setDisplayName] = useState("Femi Builder");
+  const [displayName, setDisplayName] = useState("Femi Ogunsanya");
   const [handle, setHandle] = useState("femi-usdc");
-  const [roleTitle, setRoleTitle] = useState("Global Software Engineer · Paid in USDC");
+  const [roleTitle, setRoleTitle] = useState("Software Engineer · Paid in USDC");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [copied, setCopied] = useState<string | null>(null);
