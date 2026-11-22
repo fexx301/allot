@@ -7,14 +7,15 @@ import {
   AlertTriangle,
   ArrowRight,
   CheckCircle2,
+  Code2,
   KeyRound,
   Lock,
   Plus,
   RefreshCw,
+  Scissors,
   Search,
   ShieldAlert,
   ShieldCheck,
-  Sparkles,
   Trash2,
   Wallet,
 } from "lucide-react";
@@ -44,9 +45,9 @@ interface CatalogResponse {
 const SCENARIOS = [
   {
     id: "salary-3500",
-    badge: "Flagship · Live Spread Guard",
-    title: "$3,500 USDC Remote Salary",
-    subtitle: "$1,000 cash floor · 25 bps max drift · AAPL / NVDA / SpaceX / TSLA",
+    tag: "Payday Split",
+    title: "$3,500 Remote Salary",
+    subtitle: "$1,000 rent floor · 25 bps spread cap · AAPL, NVDA, SpaceX, TSLA",
     incomingUsd: 3500,
     existingCashUsd: 400,
     cashFloorUsd: 1000,
@@ -62,9 +63,9 @@ const SCENARIOS = [
   },
   {
     id: "floor-refusal",
-    badge: "Refusal · CASH_FLOOR_PROTECTED",
+    tag: "Cash Floor Guard",
     title: "$850 Freelance Invoice",
-    subtitle: "Below $1,000 rent floor → refuses all stock buys, preserves 100% USDC",
+    subtitle: "Below $1,000 rent floor — locks tear-off stub, keeps 100% in USDC",
     incomingUsd: 850,
     existingCashUsd: 100,
     cashFloorUsd: 1000,
@@ -78,9 +79,9 @@ const SCENARIOS = [
   },
   {
     id: "dust-and-market",
-    badge: "Refusal · BELOW_MIN_NOTIONAL + DeFi Fill",
-    title: "$32 Micro-Payout (55 bps Cap)",
-    subtitle: "4% leg ($1.28) carries over cleanly while tight legs route DeFi Market",
+    tag: "Dust Carryover",
+    title: "$32 Micro-Payout",
+    subtitle: "$1.28 SpaceX slice rolls forward cleanly while larger legs fill",
     incomingUsd: 32,
     existingCashUsd: 1000,
     cashFloorUsd: 1000,
@@ -96,12 +97,12 @@ const SCENARIOS = [
 ];
 
 const BAR_COLORS = [
-  "bg-emerald-600",
-  "bg-slate-800",
-  "bg-teal-600",
-  "bg-indigo-600",
-  "bg-amber-600",
-  "bg-cyan-700",
+  "bg-[#701735]",
+  "bg-[#171412]",
+  "bg-teal-700",
+  "bg-amber-700",
+  "bg-rose-800",
+  "bg-stone-600",
 ];
 
 function fmtUsd(cents: number): string {
@@ -116,8 +117,8 @@ function MiniSparkline({ points, breached }: { points?: number[]; breached: bool
   const min = Math.min(...points);
   const max = Math.max(...points);
   const span = max - min || 1;
-  const w = 68;
-  const h = 22;
+  const w = 72;
+  const h = 24;
   const d = points
     .map((v, i) => {
       const x = (i / (points.length - 1)) * w;
@@ -130,7 +131,7 @@ function MiniSparkline({ points, breached }: { points?: number[]; breached: bool
       <path
         d={d}
         fill="none"
-        stroke={breached ? "#B45309" : "#047857"}
+        stroke={breached ? "#B45309" : "#0F766E"}
         strokeWidth="1.75"
         strokeLinecap="round"
         strokeLinejoin="round"
@@ -140,40 +141,82 @@ function MiniSparkline({ points, breached }: { points?: number[]; breached: bool
 }
 
 function SpreadGauge({ driftBps, capBps }: { driftBps: number; capBps: number }) {
-  const maxScale = Math.max(80, capBps * 1.6, Math.abs(driftBps) * 1.25);
+  const maxScale = Math.max(70, capBps * 1.6, Math.abs(driftBps) * 1.25);
   const clampedDrift = Math.max(0, Math.min(maxScale, driftBps));
-  const capPct = Math.min(98, (capBps / maxScale) * 100);
-  const driftPct = Math.min(98, (clampedDrift / maxScale) * 100);
+  const capPct = Math.min(96, (capBps / maxScale) * 100);
+  const driftPct = Math.min(97, (clampedDrift / maxScale) * 100);
   const breached = driftBps > capBps;
 
   return (
-    <div className="mt-2.5">
-      <div className="flex items-center justify-between font-mono text-[10px] text-stone-500">
-        <span>0 bps (Market)</span>
-        <span className={breached ? "font-semibold text-amber-800" : "font-semibold text-emerald-700"}>
-          Quote {driftBps >= 0 ? "+" : ""}
-          {driftBps.toFixed(1)} bps vs cap {capBps} bps
+    <div className="mt-3">
+      <div className="flex items-center justify-between text-[11px]">
+        <span className="text-[#625B54]">Live Spread vs Your {capBps} bps Cap</span>
+        <span
+          className={`font-mono font-semibold tabular-nums ${
+            breached ? "text-amber-800" : "text-teal-800"
+          }`}
+        >
+          {driftBps >= 0 ? "+" : ""}
+          {driftBps.toFixed(1)} bps
         </span>
       </div>
-      <div className="relative mt-1 h-2 w-full rounded-full bg-stone-200">
+      <div className="relative mt-1.5 h-2 w-full rounded-full bg-[#ECE8DF]">
         <div
-          className="h-full rounded-l-full bg-emerald-200/80"
+          className="h-full rounded-l-full bg-teal-600/20"
           style={{ width: `${capPct}%` }}
         />
         <div
-          className="absolute top-[-2px] h-3 w-0.5 bg-slate-900"
+          className="absolute top-[-3px] h-3.5 w-[2px] rounded-full bg-[#701735]"
           style={{ left: `${capPct}%` }}
           title={`Max Drift Cap: ${capBps} bps`}
         />
         <div
-          className={`absolute top-1/2 h-3 w-3 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-white shadow-xs ${
-            breached ? "bg-amber-600" : "bg-emerald-600"
+          className={`absolute top-1/2 h-3 w-3 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-white shadow-xs transition-all duration-300 ${
+            breached ? "bg-amber-600" : "bg-teal-700"
           }`}
           style={{ left: `${Math.max(2, driftPct)}%` }}
         />
       </div>
     </div>
   );
+}
+
+function consumerBadgeForLeg(
+  action: CompiledPaydayPlan["legs"][number]["action"],
+  limitPrice: string | null,
+): { label: string; tone: string } {
+  switch (action) {
+    case "EXECUTE_DEFI_MARKET":
+      return {
+        label: "Instant Fill · Base",
+        tone: "border-teal-200 bg-teal-50 text-teal-900",
+      };
+    case "STAGE_CEFI_LIMIT":
+      return {
+        label: limitPrice ? `Limit Protected @ $${limitPrice}` : "CeFi Limit Protected",
+        tone: "border-amber-200 bg-amber-50 text-amber-900",
+      };
+    case "CARRIED_OVER":
+      return {
+        label: "Rolled to Next Payday",
+        tone: "border-[#EAD2DA] bg-[#F9EFF2] text-[#701735]",
+      };
+    case "BLOCKED_NO_REFERENCE":
+      return {
+        label: "Held · No Reference Price",
+        tone: "border-rose-200 bg-rose-50 text-rose-900",
+      };
+    case "BLOCKED_DRIFT_NO_CLOB":
+      return {
+        label: "Held · Spread Too Wide",
+        tone: "border-amber-200 bg-amber-50 text-amber-900",
+      };
+    default:
+      return {
+        label: "Held Safely in USDC",
+        tone: "border-[#E5E1D8] bg-[#FAF8F4] text-[#625B54]",
+      };
+  }
 }
 
 export function PaydayStudio() {
@@ -221,10 +264,13 @@ export function PaydayStudio() {
     },
   ]);
 
-  // Stock picker state
+  // Stock picker & inspector toggle
   const [pickerOpen, setPickerOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
-  const [venueFilter, setVenueFilter] = useState<"dual" | "coinbase" | "robinhood" | "solana" | "all">("dual");
+  const [venueFilter, setVenueFilter] = useState<
+    "dual" | "coinbase" | "robinhood" | "solana" | "all"
+  >("dual");
+  const [showGatewayInspector, setShowGatewayInspector] = useState(false);
 
   // Plan & Execution state
   const [plan, setPlan] = useState<CompiledPaydayPlan | null>(null);
@@ -235,7 +281,6 @@ export function PaydayStudio() {
   const [executing, setExecuting] = useState(false);
   const [execMessage, setExecMessage] = useState<{ type: "ok" | "err"; text: string } | null>(null);
 
-  // Init browser P-256 signer vault + saved wallet
   useEffect(() => {
     try {
       setVault(loadOrCreateBrowserVault());
@@ -246,7 +291,6 @@ export function PaydayStudio() {
     }
   }, []);
 
-  // Load live 136-stock True Markets catalog
   useEffect(() => {
     let active = true;
     async function load() {
@@ -257,7 +301,6 @@ export function PaydayStudio() {
         if (!res.ok) throw new Error(data.error || "Catalog load failed");
         if (!active) return;
         setCatalog(data);
-        // Resolve exact economicAssetIds from live catalog
         setLegs((prev) =>
           prev.map((l) => {
             const match = (data.stocks as PairedStockAsset[]).find(
@@ -325,11 +368,10 @@ export function PaydayStudio() {
     }
   }, [incomingUsd, existingCashUsd, connectedWallet, currentRule, legs.length, totalWeightPct]);
 
-  // Debounced live Gateway quote compilation whenever inputs change
   useEffect(() => {
     const t = setTimeout(() => {
       compileLivePlan();
-    }, 320);
+    }, 300);
     return () => clearTimeout(t);
   }, [compileLivePlan]);
 
@@ -397,16 +439,12 @@ export function PaydayStudio() {
       if (venueFilter === "solana" && !s.chains.includes("solana")) return false;
       if (searchQuery.trim()) {
         const q = searchQuery.toLowerCase();
-        return (
-          s.symbol.toLowerCase().includes(q) ||
-          s.name.toLowerCase().includes(q)
-        );
+        return s.symbol.toLowerCase().includes(q) || s.name.toLowerCase().includes(q);
       }
       return true;
     });
   }, [catalog, venueFilter, searchQuery]);
 
-  // Client-side tamper test + P-256 verification
   const localVerification = useMemo(() => {
     if (!plan) return null;
     const testedPlan = simulateTamper
@@ -419,7 +457,6 @@ export function PaydayStudio() {
     if (!plan || !vault) return;
     setExecMessage(null);
 
-    // Client-side rule verification before P-256 signing
     if (localVerification && !localVerification.ok) {
       setExecMessage({
         type: "err",
@@ -506,7 +543,6 @@ export function PaydayStudio() {
           );
         }
 
-        // Re-verify every prepared order's FRESH quote against the user's maxDriftBps cap BEFORE signing!
         for (const p of readyOrders) {
           const legMeta = executableLegs.find((l) => l.symbol === p.symbol);
           const check = verifyPreparedOrderQuote({
@@ -517,13 +553,11 @@ export function PaydayStudio() {
             preparedQuote: p.quote,
           });
           if (!check.ok) {
-            // Abort signing and trigger a fresh plan compilation so user can re-decide
             void compileLivePlan();
             throw new Error(`${check.code}: ${check.reason}`);
           }
         }
 
-        // Sign every verified Gateway payload locally with browser P-256 key!
         signedOrders = await Promise.all(
           readyOrders.map(async (p) => {
             const legMeta = executableLegs.find((l) => l.symbol === p.symbol);
@@ -571,153 +605,302 @@ export function PaydayStudio() {
     }
   }
 
-  return (
-    <div className="space-y-6">
-      {/* Editorial Hero Header */}
-      <section className="rounded-2xl border border-[#E5E4DE] bg-white p-6 shadow-xs sm:p-7">
-        <div className="flex flex-col justify-between gap-5 lg:flex-row lg:items-center">
-          <div className="max-w-2xl">
-            <div className="flex flex-wrap items-center gap-2">
-              <span className="inline-flex items-center gap-1.5 rounded-full border border-emerald-200 bg-emerald-50 px-2.5 py-0.5 text-xs font-medium text-emerald-800">
-                <Sparkles className="h-3 w-3" />
-                {connectedWallet ? "LIVE GATEWAY · NON-CUSTODIAL WALLET" : "LIVE QUOTES · PREVIEW MODE"}
-              </span>
-              {catalog && (
-                <span className="inline-flex items-center rounded-full border border-[#E5E4DE] bg-[#F7F6F2] px-2.5 py-0.5 font-mono text-[11px] text-stone-600">
-                  {catalog.totalListings} live stocks · {catalog.dualVenueFlagshipCount} dual-venue CLOB
-                </span>
-              )}
-            </div>
-            <h1 className="mt-3 text-2xl font-semibold tracking-tight text-slate-900 sm:text-3xl">
-              Route every USDC paycheck into U.S. stocks — automatically.
-            </h1>
-            <p className="mt-1.5 text-sm leading-relaxed text-stone-600">
-              Allot is a non-custodial Global 401(k) on True Markets Gateway. Set your rent floor and
-              max spread cap once: incoming USDC auto-splits across 136 tokenized U.S. stocks (including
-              Apple, NVIDIA, Tesla, and pre-IPO SpaceX), auto-switches drifted weekend spreads to{" "}
-              <span className="font-medium text-slate-900">CeFi CLOB limit orders</span>, and never moves
-              a cent without your browser&apos;s P-256 signature.
-            </p>
-          </div>
+  const totalInvestedCents = plan
+    ? plan.totals.executableMarketCents + plan.totals.stagedLimitCents
+    : 0;
+  const floorLocked = plan?.planStatus === "REFUSED_CASH_FLOOR";
 
-          <div className="flex shrink-0 flex-col gap-2 sm:flex-row lg:flex-col">
-            <button
-              onClick={() => setWalletModalOpen(true)}
-              className="inline-flex items-center justify-center gap-2 rounded-xl bg-slate-900 px-4 py-2.5 text-sm font-medium text-white shadow-xs transition hover:bg-emerald-800"
-            >
-              <Wallet className="h-4 w-4" />
+  return (
+    <div className="space-y-7">
+      {/* Editorial Hero Header */}
+      <section className="flex flex-col justify-between gap-6 lg:flex-row lg:items-end">
+        <div className="max-w-2xl">
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="inline-flex items-center gap-1.5 rounded-full border border-[#EAD2DA] bg-[#F9EFF2] px-3 py-1 text-xs font-medium text-[#701735]">
               {connectedWallet
-                ? `Wallet: ${connectedWallet.handle}`
-                : "Create Non-Custodial Wallet"}
-            </button>
-            <Link
-              href={connectedWallet?.sharePath || `/pay/${connectedWallet?.handle || "demo-engineer"}`}
-              className="inline-flex items-center justify-center gap-1.5 rounded-xl border border-[#E5E4DE] bg-[#F7F6F2] px-4 py-2 text-xs font-medium text-slate-800 transition hover:bg-stone-200/60"
-            >
-              Open Shareable USDC Paylink
-              <ArrowRight className="h-3.5 w-3.5" />
-            </Link>
-            <Link
-              href="/receipt/rcpt_live_base_20261122"
-              className="inline-flex items-center justify-center gap-1.5 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-2 text-xs font-medium text-emerald-900 transition hover:bg-emerald-100"
-            >
-              <CheckCircle2 className="h-3.5 w-3.5 text-emerald-700" />
-              Verified Live Base Receipt
-            </Link>
+                ? "Live Non-Custodial Wallet"
+                : "Live True Markets Quotes · Preview Mode"}
+            </span>
+            {catalog && (
+              <span className="inline-flex items-center rounded-full border border-[#E5E1D8] bg-white px-3 py-1 font-mono text-[11px] text-[#625B54]">
+                {catalog.totalListings} U.S. Stocks · {catalog.dualVenueFlagshipCount} CLOB Limit Pairs
+              </span>
+            )}
           </div>
+          <h1 className="font-serif-display mt-3.5 text-3xl font-semibold tracking-tight text-[#171412] sm:text-4xl">
+            Keep your rent safe. Put the rest into U.S. stocks.
+          </h1>
+          <p className="mt-2.5 text-[15px] leading-relaxed text-[#625B54]">
+            A non-custodial Global 401(k) for stablecoin earners. Set your cash floor and spread
+            limit once — every incoming USDC paycheck automatically splits into Apple, NVIDIA,
+            SpaceX, and 130+ tokenized equities, never below your floor and never without your
+            browser&apos;s P-256 signature.
+          </p>
         </div>
 
-        {/* 3 One-Click 60-Second Judge Scenarios */}
-        <div className="mt-6 grid grid-cols-1 gap-3 md:grid-cols-3">
-          {SCENARIOS.map((sc) => {
-            const active = activeScenario === sc.id;
-            return (
-              <button
-                key={sc.id}
-                onClick={() => applyScenario(sc.id)}
-                className={`group rounded-xl border p-3.5 text-left transition ${
-                  active
-                    ? "border-slate-900 bg-[#F7F6F2] ring-1 ring-slate-900"
-                    : "border-[#E5E4DE] bg-white hover:border-stone-400"
+        <div className="flex shrink-0 flex-wrap items-center gap-2.5">
+          <button
+            onClick={() => setWalletModalOpen(true)}
+            className="inline-flex items-center justify-center gap-2 rounded-full bg-[#701735] px-5 py-2.5 text-sm font-medium text-white shadow-xs transition hover:bg-[#581028]"
+          >
+            <Wallet className="h-4 w-4" />
+            {connectedWallet ? `Wallet: ${connectedWallet.handle}` : "Create Wallet"}
+          </button>
+          <Link
+            href="/receipt/rcpt_live_base_20261122"
+            className="inline-flex items-center justify-center gap-1.5 rounded-full border border-[#EAD2DA] bg-[#F9EFF2] px-4 py-2.5 text-xs font-semibold text-[#701735] transition hover:bg-[#F3DFE6]"
+          >
+            <CheckCircle2 className="h-3.5 w-3.5" />
+            Verified Live Base Receipt
+          </Link>
+          <Link
+            href={connectedWallet?.sharePath || `/pay/${connectedWallet?.handle || "demo-engineer"}`}
+            className="inline-flex items-center justify-center gap-1.5 rounded-full border border-[#E5E1D8] bg-white px-4 py-2.5 text-xs font-medium text-[#171412] transition hover:border-[#701735]/40"
+          >
+            Share Paylink
+            <ArrowRight className="h-3.5 w-3.5" />
+          </Link>
+        </div>
+      </section>
+
+      {/* 3 Tactile Scenario Pills */}
+      <section className="grid grid-cols-1 gap-3 md:grid-cols-3">
+        {SCENARIOS.map((sc) => {
+          const active = activeScenario === sc.id;
+          return (
+            <button
+              key={sc.id}
+              onClick={() => applyScenario(sc.id)}
+              className={`group rounded-2xl border p-4 text-left transition ${
+                active
+                  ? "border-[#701735] bg-white shadow-sm ring-1 ring-[#701735]"
+                  : "border-[#E5E1D8] bg-white/75 hover:border-[#701735]/40 hover:bg-white"
+              }`}
+            >
+              <div className="flex items-center justify-between">
+                <span
+                  className={`rounded-full px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-wider ${
+                    active
+                      ? "bg-[#701735] text-white"
+                      : "bg-[#F6F4EF] text-[#625B54]"
+                  }`}
+                >
+                  {sc.tag}
+                </span>
+                {active && <CheckCircle2 className="h-4 w-4 text-[#701735]" />}
+              </div>
+              <div className="font-serif-display mt-2.5 text-base font-semibold text-[#171412]">
+                {sc.title}
+              </div>
+              <div className="mt-0.5 text-xs leading-relaxed text-[#625B54]">{sc.subtitle}</div>
+            </button>
+          );
+        })}
+      </section>
+
+      {/* SIGNATURE VISUAL MOMENT: Interactive Tear-Off Paycheck Stub */}
+      <section className="relative overflow-hidden rounded-3xl border border-[#E5E1D8] bg-white shadow-sm">
+        <div className="h-1.5 w-full bg-[#701735]" />
+        <div className="grid grid-cols-1 lg:grid-cols-12">
+          {/* LEFT RETAINED STUB: Protected Cash Floor */}
+          <div
+            className={`relative p-6 sm:p-7 lg:col-span-5 ${
+              floorLocked ? "bg-[#F9EFF2]" : "bg-[#FAF8F4]"
+            }`}
+          >
+            <div className="flex items-center justify-between">
+              <span className="font-mono text-[10px] font-semibold uppercase tracking-widest text-[#701735]">
+                Retained Pay Stub · Liquid USDC
+              </span>
+              <span
+                className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[11px] font-semibold ${
+                  floorLocked
+                    ? "bg-[#701735] text-white"
+                    : "border border-[#EAD2DA] bg-white text-[#701735]"
                 }`}
               >
-                <div className="flex items-center justify-between">
-                  <span
-                    className={`rounded-md px-2 py-0.5 font-mono text-[10px] font-semibold uppercase tracking-wide ${
-                      sc.id === "floor-refusal"
-                        ? "bg-indigo-50 text-indigo-800"
-                        : sc.id === "dust-and-market"
-                          ? "bg-amber-50 text-amber-800"
-                          : "bg-emerald-50 text-emerald-800"
-                    }`}
-                  >
-                    {sc.badge}
-                  </span>
-                  {active && <CheckCircle2 className="h-4 w-4 text-slate-900" />}
+                <Lock className="h-3 w-3" />
+                {floorLocked ? "Floor Locked" : "Protected"}
+              </span>
+            </div>
+
+            <div className="mt-5">
+              <div className="text-xs text-[#625B54]">Kept safely in your Base/Solana wallet</div>
+              {planLoading && !plan ? (
+                <div className="skeleton mt-2 h-10 w-40 rounded-lg" />
+              ) : (
+                <div className="font-serif-display mt-1 text-4xl font-semibold tracking-tight text-[#171412] tabular-nums">
+                  {plan ? fmtUsd(plan.protectedCashCents) : fmtUsd(Math.round(cashFloorUsd * 100))}
                 </div>
-                <div className="mt-2 text-sm font-semibold text-slate-900">{sc.title}</div>
-                <div className="mt-0.5 text-xs text-stone-600">{sc.subtitle}</div>
+              )}
+              <div className="mt-2 flex items-center gap-3 font-mono text-xs text-[#625B54] tabular-nums">
+                <span>Incoming: ${incomingUsd.toLocaleString()}</span>
+                <span>·</span>
+                <span>Rent Floor: ${cashFloorUsd.toLocaleString()}</span>
+              </div>
+            </div>
+
+            {/* Subtle check-stub bars echoing the Allot logo */}
+            <div className="mt-6 space-y-2 opacity-65">
+              <div className="h-2.5 w-3/4 rounded-full bg-[#701735]/15" />
+              <div className="h-2.5 w-1/2 rounded-full bg-[#701735]/10" />
+            </div>
+
+            {floorLocked && (
+              <div className="mt-5 flex items-start gap-2.5 rounded-2xl border border-[#701735]/25 bg-white p-3.5 text-xs text-[#701735]">
+                <ShieldAlert className="mt-0.5 h-4 w-4 shrink-0" />
+                <div>
+                  <span className="font-semibold">Pay stub kept intact.</span> Total cash (
+                  {fmtUsd(plan.totalCashBeforeCents)}) is below your {fmtUsd(plan.cashFloorCents)}{" "}
+                  rent floor, so Allot refused all stock orders.
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* CENTER PERFORATED TEAR-OFF DIVIDER */}
+          <div className="relative flex items-center justify-center border-y border-dashed border-[#D8D1C5] bg-[#F6F4EF] py-2.5 lg:col-span-1 lg:border-x lg:border-y-0 lg:py-0">
+            <div className="flex items-center gap-1.5 rounded-full border border-[#EAD2DA] bg-white px-3 py-1 font-mono text-[10px] font-semibold text-[#701735] shadow-xs lg:-rotate-90 lg:whitespace-nowrap">
+              <Scissors className="h-3 w-3" />
+              {floorLocked
+                ? "LOCKED · $0 TORN OFF"
+                : `${plan ? fmtUsd(totalInvestedCents) : "…"} ALLOTTED`}
+            </div>
+          </div>
+
+          {/* RIGHT DETACHABLE STUB: Auto-Allotted U.S. Equities */}
+          <div className="flex flex-col justify-between p-6 sm:p-7 lg:col-span-6">
+            <div>
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <span className="font-mono text-[10px] font-semibold uppercase tracking-widest text-[#625B54]">
+                  Detachable Equity Stub · U.S. Stocks (T+0)
+                </span>
+                {plan && plan.totals.estimatedSavingsUsd > 0 && (
+                  <span className="rounded-full bg-amber-50 px-2.5 py-0.5 font-mono text-[11px] font-semibold text-amber-900 ring-1 ring-amber-200">
+                    Est. ${plan.totals.estimatedSavingsUsd.toFixed(2)} spread saved
+                  </span>
+                )}
+              </div>
+
+              <div className="mt-4 flex flex-wrap items-baseline justify-between gap-4">
+                <div>
+                  <div className="text-xs text-[#625B54]">Auto-routed into tokenized equities</div>
+                  {planLoading && !plan ? (
+                    <div className="skeleton mt-2 h-10 w-44 rounded-lg" />
+                  ) : (
+                    <div className="font-serif-display mt-1 text-4xl font-semibold tracking-tight text-[#701735] tabular-nums">
+                      {plan ? fmtUsd(totalInvestedCents) : "$0.00"}
+                    </div>
+                  )}
+                </div>
+
+                <div className="flex gap-4 font-mono text-xs tabular-nums">
+                  <div>
+                    <div className="text-[10px] uppercase text-[#625B54]">Instant Fill</div>
+                    <div className="font-semibold text-teal-800">
+                      {plan ? fmtUsd(plan.totals.executableMarketCents) : "—"}
+                    </div>
+                  </div>
+                  <div>
+                    <div className="text-[10px] uppercase text-[#625B54]">Limit Protected</div>
+                    <div className="font-semibold text-amber-800">
+                      {plan ? fmtUsd(plan.totals.stagedLimitCents) : "—"}
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Animated Split Bar */}
+              <div className="mt-5 flex h-3 w-full overflow-hidden rounded-full bg-[#ECE8DF]">
+                {legs.map((leg, i) => (
+                  <div
+                    key={leg.economicAssetId}
+                    style={{ width: floorLocked ? "0%" : `${Math.min(100, leg.weightPct)}%` }}
+                    className={`${BAR_COLORS[i % BAR_COLORS.length]} transition-all duration-500`}
+                    title={`${leg.symbol}: ${leg.weightPct}%`}
+                  />
+                ))}
+              </div>
+              <div className="mt-2.5 flex flex-wrap gap-x-4 gap-y-1 text-xs text-[#625B54]">
+                {legs.map((leg, i) => (
+                  <span key={leg.economicAssetId} className="inline-flex items-center gap-1.5">
+                    <span
+                      className={`h-2 w-2 rounded-full ${BAR_COLORS[i % BAR_COLORS.length]}`}
+                    />
+                    <span className="font-medium text-[#171412]">{leg.name}</span>
+                    <span className="font-mono text-[11px]">{leg.weightPct}%</span>
+                  </span>
+                ))}
+              </div>
+            </div>
+
+            <div className="mt-6 flex flex-wrap items-center justify-between gap-2 border-t border-[#E5E1D8] pt-4 text-xs text-[#625B54]">
+              <span className="flex items-center gap-1.5">
+                <ShieldCheck className="h-4 w-4 text-[#701735]" />
+                Non-custodial · Signed only by your browser P-256 key
+              </span>
+              <button
+                onClick={() => compileLivePlan()}
+                disabled={planLoading}
+                className="inline-flex items-center gap-1 font-medium text-[#701735] hover:underline"
+              >
+                <RefreshCw className={`h-3 w-3 ${planLoading ? "animate-spin" : ""}`} />
+                Refresh live prices
               </button>
-            );
-          })}
+            </div>
+          </div>
         </div>
       </section>
 
       {catalogError && (
-        <div className="rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-800">
+        <div className="rounded-2xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-900">
           Catalog error: {catalogError}
         </div>
       )}
 
-      {/* Main Split Workbench: Left Rule Studio | Right Live Execution & Refusal Inspector */}
+      {/* Main Two-Column Workbench: Left Rule Studio | Right Execution & P-256 Sign */}
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-12">
         {/* LEFT: Paycheck Rule Studio */}
         <section className="space-y-5 lg:col-span-5">
-          <div className="rounded-2xl border border-[#E5E4DE] bg-white p-5 shadow-xs">
-            <div className="flex items-center justify-between">
-              <h2 className="text-sm font-semibold uppercase tracking-wider text-stone-500">
-                1. Paycheck &amp; Safety Guardrails
-              </h2>
-              <button
-                onClick={() => compileLivePlan()}
-                disabled={planLoading}
-                className="inline-flex items-center gap-1 rounded-lg border border-[#E5E4DE] px-2 py-1 text-xs font-medium text-stone-600 hover:bg-stone-50"
-              >
-                <RefreshCw className={`h-3 w-3 ${planLoading ? "animate-spin" : ""}`} />
-                Refresh Live Quotes
-              </button>
-            </div>
+          <div className="rounded-2xl border border-[#E5E1D8] bg-white p-5 shadow-xs">
+            <h2 className="font-serif-display text-lg font-semibold text-[#171412]">
+              Paycheck &amp; Protection Rules
+            </h2>
+            <p className="mt-0.5 text-xs text-[#625B54]">
+              Adjust your income, rent floor, or max spread cap to watch live True Markets routing
+              update instantly.
+            </p>
 
             <div className="mt-4 grid grid-cols-2 gap-3">
               <div>
-                <label className="block text-xs font-medium text-stone-600">
-                  Incoming USDC Paycheck
+                <label className="block text-xs font-medium text-[#625B54]">
+                  Incoming Paycheck
                 </label>
-                <div className="mt-1 flex items-center rounded-xl border border-[#E5E4DE] bg-[#F7F6F2] px-3 py-2 focus-within:border-slate-900 focus-within:bg-white">
-                  <span className="font-mono text-sm text-stone-400">$</span>
+                <div className="mt-1 flex items-center rounded-xl border border-[#E5E1D8] bg-[#FAF8F4] px-3 py-2 focus-within:border-[#701735] focus-within:bg-white">
+                  <span className="font-mono text-sm text-[#625B54]">$</span>
                   <input
                     type="number"
                     min={0}
                     step={50}
                     value={incomingUsd}
                     onChange={(e) => setIncomingUsd(Math.max(0, Number(e.target.value)))}
-                    className="w-full bg-transparent pl-1 font-mono text-base font-semibold text-slate-900 tabular-nums outline-none"
+                    className="w-full bg-transparent pl-1 font-mono text-base font-semibold text-[#171412] tabular-nums outline-none"
                   />
                 </div>
               </div>
               <div>
-                <label className="block text-xs font-medium text-stone-600">
+                <label className="block text-xs font-medium text-[#625B54]">
                   Existing Wallet USDC
                 </label>
-                <div className="mt-1 flex items-center rounded-xl border border-[#E5E4DE] bg-[#F7F6F2] px-3 py-2 focus-within:border-slate-900 focus-within:bg-white">
-                  <span className="font-mono text-sm text-stone-400">$</span>
+                <div className="mt-1 flex items-center rounded-xl border border-[#E5E1D8] bg-[#FAF8F4] px-3 py-2 focus-within:border-[#701735] focus-within:bg-white">
+                  <span className="font-mono text-sm text-[#625B54]">$</span>
                   <input
                     type="number"
                     min={0}
                     step={50}
                     value={existingCashUsd}
                     onChange={(e) => setExistingCashUsd(Math.max(0, Number(e.target.value)))}
-                    className="w-full bg-transparent pl-1 font-mono text-base font-semibold text-slate-900 tabular-nums outline-none"
+                    className="w-full bg-transparent pl-1 font-mono text-base font-semibold text-[#171412] tabular-nums outline-none"
                   />
                 </div>
               </div>
@@ -726,10 +909,8 @@ export function PaydayStudio() {
             {/* Cash Floor Slider */}
             <div className="mt-5">
               <div className="flex items-center justify-between text-xs">
-                <span className="font-medium text-slate-800">
-                  Protected Rent / Cash Floor
-                </span>
-                <span className="font-mono font-semibold text-indigo-800 tabular-nums">
+                <span className="font-medium text-[#171412]">Protected Cash Floor</span>
+                <span className="font-mono font-semibold text-[#701735] tabular-nums">
                   ${cashFloorUsd.toLocaleString()} USDC
                 </span>
               </div>
@@ -740,20 +921,18 @@ export function PaydayStudio() {
                 step={50}
                 value={cashFloorUsd}
                 onChange={(e) => setCashFloorUsd(Number(e.target.value))}
-                className="mt-2 w-full accent-slate-900"
+                className="mt-2 w-full accent-[#701735]"
               />
-              <p className="mt-1 text-[11px] text-stone-500">
-                Hard refusal (<code className="font-mono">CASH_FLOOR_PROTECTED</code>) blocks all buys
-                until your USDC cash sits safely above this floor.
+              <p className="mt-1 text-[11px] text-[#625B54]">
+                Rent and bills come first — zero stock buys happen until your cash exceeds this
+                reserve.
               </p>
             </div>
 
             {/* Drift Guard Slider */}
-            <div className="mt-5 border-t border-[#E5E4DE] pt-4">
+            <div className="mt-5 border-t border-[#E5E1D8] pt-4">
               <div className="flex items-center justify-between text-xs">
-                <span className="font-medium text-slate-800">
-                  Max Spread Drift Guard (vs Live Market)
-                </span>
+                <span className="font-medium text-[#171412]">Max Spread Drift Cap</span>
                 <span className="font-mono font-semibold text-amber-800 tabular-nums">
                   {maxDriftBps} bps ({(maxDriftBps / 100).toFixed(2)}%)
                 </span>
@@ -767,76 +946,64 @@ export function PaydayStudio() {
                 onChange={(e) => setMaxDriftBps(Number(e.target.value))}
                 className="mt-2 w-full accent-amber-700"
               />
-              <div className="mt-2 flex items-center justify-between rounded-xl border border-[#E5E4DE] bg-[#F7F6F2] px-3 py-2">
+              <label className="mt-2.5 flex cursor-pointer items-center justify-between rounded-xl border border-[#E5E1D8] bg-[#FAF8F4] px-3 py-2.5">
                 <div>
-                  <div className="text-xs font-medium text-slate-800">
-                    Auto-route drifted legs to CeFi CLOB Limit
+                  <div className="text-xs font-medium text-[#171412]">
+                    Switch wide spreads to resting limit orders
                   </div>
-                  <div className="text-[11px] text-stone-500">
-                    Uses <code className="font-mono">economic_asset_id</code> pairing when DeFi spread exceeds cap
+                  <div className="text-[11px] text-[#625B54]">
+                    Avoids weekend AMM slippage by parking a price-capped CeFi CLOB order
                   </div>
                 </div>
                 <input
                   type="checkbox"
                   checked={autoStageClobLimit}
                   onChange={(e) => setAutoStageClobLimit(e.target.checked)}
-                  className="h-4 w-4 accent-slate-900"
+                  className="h-4 w-4 accent-[#701735]"
                 />
-              </div>
+              </label>
             </div>
           </div>
 
-          {/* Stock Allocation Basket */}
-          <div className="rounded-2xl border border-[#E5E4DE] bg-white p-5 shadow-xs">
+          {/* Equity Split Basket */}
+          <div className="rounded-2xl border border-[#E5E1D8] bg-white p-5 shadow-xs">
             <div className="flex items-center justify-between">
               <div>
-                <h2 className="text-sm font-semibold uppercase tracking-wider text-stone-500">
-                  2. U.S. Equities Split ({totalWeightPct}%)
+                <h2 className="font-serif-display text-lg font-semibold text-[#171412]">
+                  U.S. Stock Basket ({totalWeightPct}%)
                 </h2>
-                <p className="text-[11px] text-stone-500">
+                <p className="text-xs text-[#625B54]">
                   {totalWeightPct < 100
-                    ? `${(100 - totalWeightPct).toFixed(0)}% of surplus stays in spendable USDC`
+                    ? `${(100 - totalWeightPct).toFixed(0)}% of surplus stays liquid in USDC`
                     : totalWeightPct === 100
-                      ? "100% of surplus above cash floor allocated"
-                      : "Weights exceed 100% — reduce a leg"}
+                      ? "100% of surplus above cash floor invested"
+                      : "Weights exceed 100% — trim a leg"}
                 </p>
               </div>
               <button
                 onClick={() => setPickerOpen((v) => !v)}
-                className="inline-flex items-center gap-1 rounded-xl border border-[#E5E4DE] bg-[#F7F6F2] px-2.5 py-1.5 text-xs font-medium text-slate-900 hover:bg-stone-200/70"
+                className="inline-flex items-center gap-1 rounded-full border border-[#EAD2DA] bg-[#F9EFF2] px-3 py-1.5 text-xs font-medium text-[#701735] transition hover:bg-[#F3DFE6]"
               >
                 <Plus className="h-3.5 w-3.5" />
-                Add from 136 Stocks
+                Add Stock
               </button>
             </div>
 
-            {/* Visual Split Bar */}
-            <div className="mt-3 flex h-2.5 w-full overflow-hidden rounded-full bg-stone-200">
-              {legs.map((leg, i) => (
-                <div
-                  key={leg.economicAssetId}
-                  style={{ width: `${Math.min(100, leg.weightPct)}%` }}
-                  className={`${BAR_COLORS[i % BAR_COLORS.length]} transition-all`}
-                  title={`${leg.symbol}: ${leg.weightPct}%`}
-                />
-              ))}
-            </div>
-
             {pickerOpen && (
-              <div className="mt-3 rounded-xl border border-slate-900/15 bg-[#F7F6F2] p-3">
-                <div className="flex items-center gap-2 rounded-lg border border-[#E5E4DE] bg-white px-2.5 py-1.5">
-                  <Search className="h-3.5 w-3.5 text-stone-400" />
+              <div className="mt-3.5 rounded-2xl border border-[#EAD2DA] bg-[#FAF8F4] p-3">
+                <div className="flex items-center gap-2 rounded-xl border border-[#E5E1D8] bg-white px-3 py-2">
+                  <Search className="h-3.5 w-3.5 text-[#625B54]" />
                   <input
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
-                    placeholder="Search Apple, NVIDIA, SpaceX, Palantir, SPY…"
-                    className="w-full text-xs text-slate-900 outline-none"
+                    placeholder="Search 136 U.S. stocks (Apple, NVIDIA, SpaceX, SPY…)"
+                    className="w-full text-xs text-[#171412] outline-none"
                   />
                 </div>
-                <div className="mt-2 flex flex-wrap gap-1">
+                <div className="mt-2 flex flex-wrap gap-1.5">
                   {(
                     [
-                      ["dual", "14 Dual-Venue CLOB"],
+                      ["dual", "14 CLOB Limit"],
                       ["coinbase", "Coinbase"],
                       ["robinhood", "Robinhood"],
                       ["solana", "Solana"],
@@ -846,52 +1013,56 @@ export function PaydayStudio() {
                     <button
                       key={k}
                       onClick={() => setVenueFilter(k)}
-                      className={`rounded-md px-2 py-0.5 text-[11px] font-medium ${
+                      className={`rounded-full px-2.5 py-0.5 text-[11px] font-medium ${
                         venueFilter === k
-                          ? "bg-slate-900 text-white"
-                          : "bg-white text-stone-600 ring-1 ring-[#E5E4DE]"
+                          ? "bg-[#701735] text-white"
+                          : "bg-white text-[#625B54] ring-1 ring-[#E5E1D8]"
                       }`}
                     >
                       {label}
                     </button>
                   ))}
                 </div>
-                <div className="mt-2 max-h-48 space-y-1 overflow-y-auto">
+                <div className="mt-2.5 max-h-52 space-y-1 overflow-y-auto">
                   {catalogLoading ? (
-                    <div className="p-2 text-xs text-stone-500">Loading live True Markets catalog…</div>
+                    <div className="p-2 text-xs text-[#625B54]">Loading live catalog…</div>
                   ) : (
                     filteredCatalog.slice(0, 35).map((stock) => (
                       <button
                         key={stock.economicAssetId}
                         onClick={() => addStockToBasket(stock)}
-                        className="flex w-full items-center justify-between rounded-lg bg-white px-2.5 py-2 text-left text-xs transition hover:bg-emerald-50"
+                        className="flex w-full items-center justify-between rounded-xl bg-white px-3 py-2 text-left text-xs transition hover:bg-[#F9EFF2]"
                       >
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-2.5">
                           {stock.icon ? (
                             // eslint-disable-next-line @next/next/no-img-element
                             <img
                               src={stock.icon}
                               alt={stock.symbol}
-                              className="h-5 w-5 rounded-full border border-[#E5E4DE] object-cover"
+                              className="h-5 w-5 rounded-full border border-[#E5E1D8] object-cover"
                             />
                           ) : (
-                            <div className="flex h-5 w-5 items-center justify-center rounded-full bg-slate-900 text-[9px] font-bold text-white">
+                            <div className="flex h-5 w-5 items-center justify-center rounded-full bg-[#701735] text-[9px] font-bold text-white">
                               {stock.symbol.slice(0, 2)}
                             </div>
                           )}
                           <div>
-                            <span className="font-mono font-semibold text-slate-900">{stock.symbol}</span>
-                            <span className="ml-1.5 text-stone-600">{stock.name}</span>
+                            <span className="font-mono font-semibold text-[#171412]">
+                              {stock.symbol}
+                            </span>
+                            <span className="ml-1.5 text-[#625B54]">{stock.name}</span>
                           </div>
                         </div>
                         <span
-                          className={`rounded px-1.5 py-0.5 font-mono text-[10px] ${
+                          className={`rounded-full px-2 py-0.5 font-mono text-[10px] ${
                             stock.supportsClobLimit
-                              ? "bg-emerald-50 text-emerald-800"
-                              : "bg-stone-100 text-stone-600"
+                              ? "bg-teal-50 text-teal-800"
+                              : "bg-[#F6F4EF] text-[#625B54]"
                           }`}
                         >
-                          {stock.supportsClobLimit ? "CeFi CLOB + DeFi" : `DeFi (${stock.chains[0] || "spot"})`}
+                          {stock.supportsClobLimit
+                            ? "CLOB + DeFi"
+                            : stock.chains[0] || "spot"}
                         </span>
                       </button>
                     ))
@@ -908,35 +1079,30 @@ export function PaydayStudio() {
                 return (
                   <div
                     key={leg.economicAssetId}
-                    className="flex items-center justify-between gap-3 rounded-xl border border-[#E5E4DE] bg-[#F7F6F2]/60 px-3 py-2.5"
+                    className="flex items-center justify-between gap-3 rounded-xl border border-[#E5E1D8] bg-[#FAF8F4] px-3.5 py-2.5"
                   >
                     <div className="flex min-w-0 items-center gap-2.5">
-                      <span className={`h-2.5 w-2.5 shrink-0 rounded-full ${BAR_COLORS[i % BAR_COLORS.length]}`} />
+                      <span
+                        className={`h-2.5 w-2.5 shrink-0 rounded-full ${BAR_COLORS[i % BAR_COLORS.length]}`}
+                      />
                       {stockMeta?.icon && (
                         // eslint-disable-next-line @next/next/no-img-element
                         <img
                           src={stockMeta.icon}
                           alt={leg.symbol}
-                          className="h-6 w-6 shrink-0 rounded-full border border-[#E5E4DE] bg-white object-cover"
+                          className="h-6 w-6 shrink-0 rounded-full border border-[#E5E1D8] bg-white object-cover"
                         />
                       )}
                       <div className="min-w-0">
                         <div className="flex items-center gap-1.5">
-                          <span className="font-mono text-xs font-semibold text-slate-900">
-                            {leg.symbol}
-                          </span>
-                          {stockMeta?.supportsClobLimit && (
-                            <span className="rounded bg-emerald-50 px-1 py-0.5 font-mono text-[9px] font-medium text-emerald-800">
-                              CLOB
-                            </span>
-                          )}
+                          <span className="text-xs font-semibold text-[#171412]">{leg.name}</span>
+                          <span className="font-mono text-[11px] text-[#625B54]">{leg.symbol}</span>
                         </div>
-                        <div className="truncate text-[11px] text-stone-500">{leg.name}</div>
                       </div>
                     </div>
 
                     <div className="flex items-center gap-2">
-                      <div className="flex items-center rounded-lg border border-[#E5E4DE] bg-white px-2 py-1">
+                      <div className="flex items-center rounded-lg border border-[#E5E1D8] bg-white px-2 py-1 focus-within:border-[#701735]">
                         <input
                           type="number"
                           min={0}
@@ -945,14 +1111,14 @@ export function PaydayStudio() {
                           onChange={(e) =>
                             updateLegWeight(leg.economicAssetId, Number(e.target.value))
                           }
-                          className="w-10 text-right font-mono text-xs font-semibold text-slate-900 tabular-nums outline-none"
+                          className="w-10 text-right font-mono text-xs font-semibold text-[#171412] tabular-nums outline-none"
                         />
-                        <span className="ml-0.5 text-xs text-stone-400">%</span>
+                        <span className="ml-0.5 text-xs text-[#625B54]">%</span>
                       </div>
                       <button
                         onClick={() => removeLeg(leg.economicAssetId)}
                         disabled={legs.length <= 1}
-                        className="rounded-lg p-1 text-stone-400 hover:bg-stone-200/70 hover:text-red-600 disabled:opacity-30"
+                        className="rounded-lg p-1 text-[#625B54] hover:bg-stone-200/70 hover:text-rose-700 disabled:opacity-30"
                       >
                         <Trash2 className="h-3.5 w-3.5" />
                       </button>
@@ -964,252 +1130,177 @@ export function PaydayStudio() {
           </div>
         </section>
 
-        {/* RIGHT: Live Cross-Venue Plan, Refusals & P-256 Signer */}
+        {/* RIGHT: Execution Plan & Non-Custodial Browser Signing */}
         <section className="space-y-5 lg:col-span-7">
-          {/* Summary Strip */}
-          <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-            <div className="rounded-2xl border border-[#E5E4DE] bg-white p-4 shadow-xs">
-              <div className="text-[11px] font-medium uppercase tracking-wider text-stone-500">
-                Protected USDC
-              </div>
-              <div className="mt-1 font-mono text-lg font-semibold text-indigo-900 tabular-nums">
-                {plan ? fmtUsd(plan.protectedCashCents) : "—"}
-              </div>
-              <div className="mt-0.5 text-[11px] text-stone-500">
-                Floor {fmtUsd(Math.round(cashFloorUsd * 100))}
-              </div>
-            </div>
-            <div className="rounded-2xl border border-[#E5E4DE] bg-white p-4 shadow-xs">
-              <div className="text-[11px] font-medium uppercase tracking-wider text-stone-500">
-                DeFi Market
-              </div>
-              <div className="mt-1 font-mono text-lg font-semibold text-emerald-800 tabular-nums">
-                {plan ? fmtUsd(plan.totals.executableMarketCents) : "—"}
-              </div>
-              <div className="mt-0.5 text-[11px] text-stone-500">Instant T+0 fill</div>
-            </div>
-            <div className="rounded-2xl border border-[#E5E4DE] bg-white p-4 shadow-xs">
-              <div className="text-[11px] font-medium uppercase tracking-wider text-stone-500">
-                CeFi CLOB Limit
-              </div>
-              <div className="mt-1 font-mono text-lg font-semibold text-amber-800 tabular-nums">
-                {plan ? fmtUsd(plan.totals.stagedLimitCents) : "—"}
-              </div>
-              <div className="mt-0.5 text-[11px] text-stone-500">Drift-guarded</div>
-            </div>
-            <div className="rounded-2xl border border-[#E5E4DE] bg-white p-4 shadow-xs">
-              <div className="text-[11px] font-medium uppercase tracking-wider text-stone-500">
-                Est. Spread Saved
-              </div>
-              <div className="mt-1 font-mono text-lg font-semibold text-slate-900 tabular-nums">
-                {plan ? `$${plan.totals.estimatedSavingsUsd.toFixed(2)}` : "—"}
-              </div>
-              <div className="mt-0.5 text-[11px] text-stone-500">vs blind weekend swap</div>
-            </div>
-          </div>
-
-          {/* Live Execution & Refusal Inspector */}
-          <div className="rounded-2xl border border-[#E5E4DE] bg-white p-5 shadow-xs">
+          <div className="rounded-2xl border border-[#E5E1D8] bg-white p-5 shadow-xs">
             <div className="flex flex-wrap items-center justify-between gap-2">
               <div>
-                <h2 className="text-sm font-semibold uppercase tracking-wider text-stone-500">
-                  3. Live Gateway Quote &amp; Deterministic Guard Plan
+                <h2 className="font-serif-display text-lg font-semibold text-[#171412]">
+                  Live Payday Execution Plan
                 </h2>
-                <p className="text-xs text-stone-500">
-                  Quotes fetched live from <code className="font-mono">POST /v1/gateway/quotes</code>{" "}
-                  and checked against <code className="font-mono">/v1/defi/market/prices</code>.
+                <p className="text-xs text-[#625B54]">
+                  Real-time prices and execution quotes from True Markets Gateway.
                 </p>
               </div>
-              {plan && (
-                <span
-                  className={`rounded-full px-2.5 py-1 font-mono text-[11px] font-semibold ${
-                    plan.planStatus === "REFUSED_CASH_FLOOR"
-                      ? "bg-indigo-50 text-indigo-800"
-                      : plan.planStatus === "READY_TO_SIGN"
-                        ? "bg-emerald-50 text-emerald-800"
-                        : "bg-amber-50 text-amber-800"
-                  }`}
-                >
-                  {plan.planStatus}
-                </span>
-              )}
+              <button
+                onClick={() => setShowGatewayInspector((v) => !v)}
+                className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-medium transition ${
+                  showGatewayInspector
+                    ? "border-[#701735] bg-[#F9EFF2] text-[#701735]"
+                    : "border-[#E5E1D8] bg-[#FAF8F4] text-[#625B54] hover:text-[#171412]"
+                }`}
+              >
+                <Code2 className="h-3.5 w-3.5" />
+                {showGatewayInspector ? "Hide API Payloads" : "Inspect Gateway Payloads"}
+              </button>
             </div>
 
             {planError && (
-              <div className="mt-4 rounded-xl border border-red-200 bg-red-50 p-3 text-xs text-red-800">
+              <div className="mt-4 rounded-xl border border-rose-200 bg-rose-50 p-3 text-xs text-rose-900">
                 {planError}
               </div>
             )}
 
-            {plan?.planStatus === "REFUSED_CASH_FLOOR" && (
-              <div className="mt-4 flex items-start gap-3 rounded-xl border border-indigo-200 bg-indigo-50/70 p-4">
-                <ShieldAlert className="mt-0.5 h-5 w-5 shrink-0 text-indigo-700" />
-                <div>
-                  <div className="font-mono text-xs font-semibold text-indigo-900">
-                    REFUSAL: CASH_FLOOR_PROTECTED
-                  </div>
-                  <p className="mt-1 text-xs leading-relaxed text-indigo-900/80">
-                    Total cash ({fmtUsd(plan.totalCashBeforeCents)}) is at or below your protected
-                    rent/bills floor ({fmtUsd(plan.cashFloorCents)}). Allot refused all stock orders
-                    and kept 100% of your paycheck liquid in USDC.
-                  </p>
-                </div>
-              </div>
-            )}
-
             <div className="mt-4 space-y-3">
-              {plan?.legs.map((leg) => {
-                const badgeStyle =
-                  leg.action === "EXECUTE_DEFI_MARKET"
-                    ? "bg-emerald-50 text-emerald-800 border-emerald-200"
-                    : leg.action === "STAGE_CEFI_LIMIT"
-                      ? "bg-amber-50 text-amber-900 border-amber-200"
-                      : leg.reasonCode === "CASH_FLOOR_PROTECTED"
-                        ? "bg-indigo-50 text-indigo-800 border-indigo-200"
-                        : "bg-stone-100 text-stone-700 border-stone-200";
-
-                return (
-                  <div
-                    key={leg.economicAssetId}
-                    className="rounded-xl border border-[#E5E4DE] bg-[#F7F6F2]/50 p-4"
-                  >
-                    <div className="flex flex-wrap items-start justify-between gap-2">
-                      <div className="flex items-center gap-2.5">
-                        {leg.icon ? (
-                          // eslint-disable-next-line @next/next/no-img-element
-                          <img
-                            src={leg.icon}
-                            alt={leg.symbol}
-                            className="h-8 w-8 rounded-full border border-[#E5E4DE] bg-white object-cover"
-                          />
-                        ) : (
-                          <div className="flex h-8 w-8 items-center justify-center rounded-full bg-slate-900 font-mono text-xs font-bold text-white">
-                            {leg.symbol.slice(0, 2)}
-                          </div>
-                        )}
-                        <div>
-                          <div className="flex items-center gap-2">
-                            <span className="font-mono text-sm font-semibold text-slate-900">
-                              {leg.symbol}
-                            </span>
-                            <span className="text-xs text-stone-600">{leg.name}</span>
-                            <span className="font-mono text-xs font-semibold text-slate-900 tabular-nums">
-                              {fmtUsd(leg.effectiveCents)}
-                            </span>
-                          </div>
-                          <div className="mt-0.5 flex flex-wrap items-center gap-2 font-mono text-[11px] text-stone-500 tabular-nums">
-                            <span>
-                              Market:{" "}
-                              {leg.marketPrice ? `$${leg.marketPrice.toFixed(2)}` : "n/a"}
-                            </span>
-                            <span>·</span>
-                            <span>
-                              Gateway Quote:{" "}
-                              {leg.quotePrice ? `$${leg.quotePrice.toFixed(2)}` : "n/a"}
-                            </span>
-                            {leg.driftBps !== null && (
-                              <>
-                                <span>·</span>
-                                <span
-                                  className={
-                                    leg.driftBps > maxDriftBps
-                                      ? "font-semibold text-amber-800"
-                                      : "font-semibold text-emerald-700"
-                                  }
-                                >
-                                  {leg.driftBps >= 0 ? "+" : ""}
-                                  {leg.driftBps.toFixed(1)} bps
-                                </span>
-                              </>
+              {!plan && planLoading
+                ? [1, 2, 3].map((n) => <div key={n} className="skeleton h-28 w-full rounded-2xl" />)
+                : plan?.legs.map((leg) => {
+                    const badge = consumerBadgeForLeg(leg.action, leg.limitPrice);
+                    return (
+                      <div
+                        key={leg.economicAssetId}
+                        className="rounded-2xl border border-[#E5E1D8] bg-[#FAF8F4]/70 p-4 transition hover:border-[#701735]/30"
+                      >
+                        <div className="flex flex-wrap items-start justify-between gap-3">
+                          <div className="flex items-center gap-3">
+                            {leg.icon ? (
+                              // eslint-disable-next-line @next/next/no-img-element
+                              <img
+                                src={leg.icon}
+                                alt={leg.symbol}
+                                className="h-9 w-9 rounded-full border border-[#E5E1D8] bg-white object-cover"
+                              />
+                            ) : (
+                              <div className="flex h-9 w-9 items-center justify-center rounded-full bg-[#701735] font-mono text-xs font-bold text-white">
+                                {leg.symbol.slice(0, 2)}
+                              </div>
                             )}
+                            <div>
+                              <div className="flex items-center gap-2">
+                                <span className="text-sm font-semibold text-[#171412]">
+                                  {leg.name}
+                                </span>
+                                <span className="font-mono text-xs text-[#625B54]">
+                                  {leg.symbol}
+                                </span>
+                                <span className="font-mono text-sm font-semibold text-[#171412] tabular-nums">
+                                  {fmtUsd(leg.effectiveCents)}
+                                </span>
+                              </div>
+                              <div className="mt-0.5 flex flex-wrap items-center gap-2 font-mono text-[11px] text-[#625B54] tabular-nums">
+                                <span>
+                                  Ref: {leg.marketPrice ? `$${leg.marketPrice.toFixed(2)}` : "n/a"}
+                                </span>
+                                <span>·</span>
+                                <span>
+                                  Quote: {leg.quotePrice ? `$${leg.quotePrice.toFixed(2)}` : "n/a"}
+                                </span>
+                              </div>
+                            </div>
+                          </div>
+
+                          <div className="flex items-center gap-3">
+                            <MiniSparkline
+                              points={sparklines[leg.economicAssetId]}
+                              breached={leg.driftBps !== null && leg.driftBps > maxDriftBps}
+                            />
+                            <span
+                              className={`rounded-full border px-2.5 py-1 text-[11px] font-semibold ${badge.tone}`}
+                            >
+                              {badge.label}
+                            </span>
                           </div>
                         </div>
-                      </div>
 
-                      <div className="flex items-center gap-3">
-                        <MiniSparkline
-                          points={sparklines[leg.economicAssetId]}
-                          breached={leg.driftBps !== null && leg.driftBps > maxDriftBps}
-                        />
-                        <span
-                          className={`rounded-lg border px-2 py-1 font-mono text-[10px] font-semibold ${badgeStyle}`}
-                        >
-                          {leg.reasonCode === "APPROVED"
-                            ? "APPROVED · DEFI MARKET"
-                            : leg.action === "STAGE_CEFI_LIMIT"
-                              ? "PRICE_DRIFT_GUARDED → CEFI CLOB LIMIT"
-                              : leg.reasonCode}
-                        </span>
-                      </div>
-                    </div>
-
-                    {leg.driftBps !== null && leg.reasonCode !== "CASH_FLOOR_PROTECTED" && (
-                      <SpreadGauge driftBps={leg.driftBps} capBps={maxDriftBps} />
-                    )}
-
-                    <p className="mt-2.5 text-xs leading-relaxed text-stone-700">
-                      {leg.reasonMessage}
-                    </p>
-
-                    {leg.targetAssetId && leg.orderType && (
-                      <div className="mt-2.5 flex flex-wrap items-center gap-2 rounded-lg border border-[#E5E4DE] bg-white px-3 py-1.5 font-mono text-[11px] text-stone-600">
-                        <span className="font-semibold text-slate-900">
-                          {leg.targetVenue?.toUpperCase()} {leg.orderType.toUpperCase()}
-                        </span>
-                        <span>qty={leg.orderQty} ({leg.qtyUnit})</span>
-                        {leg.limitPrice && (
-                          <span className="text-amber-800">limit=${leg.limitPrice}</span>
+                        {leg.driftBps !== null && leg.reasonCode !== "CASH_FLOOR_PROTECTED" && (
+                          <SpreadGauge driftBps={leg.driftBps} capBps={maxDriftBps} />
                         )}
-                        <span className="truncate text-stone-400">
-                          asset_id={leg.targetAssetId.slice(0, 12)}…
-                        </span>
+
+                        <p className="mt-2.5 text-xs leading-relaxed text-[#625B54]">
+                          {leg.reasonMessage}
+                        </p>
+
+                        {showGatewayInspector && (
+                          <div className="mt-3 rounded-xl border border-[#E5E1D8] bg-white p-3 font-mono text-[11px] text-[#575049]">
+                            <div className="flex flex-wrap gap-x-4 gap-y-1">
+                              <span>
+                                code=<strong className="text-[#701735]">{leg.reasonCode}</strong>
+                              </span>
+                              <span>action={leg.action}</span>
+                              {leg.targetVenue && (
+                                <span>
+                                  venue={leg.targetVenue} ({leg.orderType})
+                                </span>
+                              )}
+                              {leg.orderQty && (
+                                <span>
+                                  qty={leg.orderQty} ({leg.qtyUnit})
+                                </span>
+                              )}
+                              {leg.limitPrice && <span>limit=${leg.limitPrice}</span>}
+                            </div>
+                            <div className="mt-1 truncate text-[10px] text-stone-400">
+                              economic_asset_id={leg.economicAssetId}
+                              {leg.targetAssetId ? ` · asset_id=${leg.targetAssetId}` : ""}
+                            </div>
+                          </div>
+                        )}
                       </div>
-                    )}
-                  </div>
-                );
-              })}
+                    );
+                  })}
             </div>
           </div>
 
-          {/* Non-Custodial Browser P-256 Signer & Execute Panel */}
-          <div className="rounded-2xl border border-slate-900/15 bg-white p-5 shadow-xs">
+          {/* Non-Custodial P-256 Authorization Card */}
+          <div className="rounded-2xl border border-[#EAD2DA] bg-white p-5 shadow-xs">
             <div className="flex flex-wrap items-start justify-between gap-3">
               <div>
-                <div className="inline-flex items-center gap-1.5 font-mono text-[11px] font-semibold uppercase tracking-wider text-emerald-800">
+                <div className="inline-flex items-center gap-1.5 text-xs font-semibold text-[#701735]">
                   <Lock className="h-3.5 w-3.5" />
-                  4. Client-Side ECDSA P-256 Signer Verification
+                  Non-Custodial Browser Authorization
                 </div>
-                <p className="mt-1 text-xs text-stone-600">
-                  Allot&apos;s server holds only the Org API key and{" "}
-                  <span className="font-medium text-slate-900">cannot move funds</span>. Your browser
-                  verifies the canonical <code className="font-mono">plan_hash</code> against your
-                  local Cash Floor &amp; Drift rules before stamping True Markets payloads.
+                <p className="mt-1 text-xs leading-relaxed text-[#625B54]">
+                  Allot&apos;s backend cannot move a cent on its own. Your browser verifies the
+                  exact cash floor, spread cap, and prepared Gateway quote before signing with your
+                  local P-256 key.
                 </p>
               </div>
-              <label className="inline-flex cursor-pointer items-center gap-2 rounded-lg border border-[#E5E4DE] bg-[#F7F6F2] px-2.5 py-1.5 text-[11px] font-medium text-stone-700">
+              <label className="inline-flex cursor-pointer items-center gap-2 rounded-full border border-[#E5E1D8] bg-[#FAF8F4] px-3 py-1.5 text-[11px] font-medium text-[#625B54]">
                 <input
                   type="checkbox"
                   checked={simulateTamper}
                   onChange={(e) => setSimulateTamper(e.target.checked)}
-                  className="accent-red-600"
+                  className="accent-rose-700"
                 />
-                Test Server Tamper Refusal
+                Test Tamper Refusal
               </label>
             </div>
 
-            <div className="mt-3 grid grid-cols-1 gap-2 rounded-xl border border-[#E5E4DE] bg-[#F7F6F2] p-3 font-mono text-[11px] sm:grid-cols-2">
-              <div>
-                <span className="text-stone-500">P-256 Key: </span>
-                <span className="text-slate-900">{vault?.fingerprint ?? "…"}</span>
+            {showGatewayInspector && (
+              <div className="mt-3 grid grid-cols-1 gap-2 rounded-xl border border-[#E5E1D8] bg-[#FAF8F4] p-3 font-mono text-[11px] sm:grid-cols-2">
+                <div>
+                  <span className="text-[#625B54]">P-256 Key: </span>
+                  <span className="text-[#171412]">{vault?.fingerprint ?? "…"}</span>
+                </div>
+                <div className="truncate">
+                  <span className="text-[#625B54]">plan_hash: </span>
+                  <span className="text-[#171412]">{plan?.planHash.slice(0, 22) ?? "…"}…</span>
+                </div>
               </div>
-              <div className="truncate">
-                <span className="text-stone-500">plan_hash: </span>
-                <span className="text-slate-900">{plan?.planHash.slice(0, 20) ?? "…"}…</span>
-              </div>
-            </div>
+            )}
 
             {localVerification && !localVerification.ok && (
-              <div className="mt-3 flex items-start gap-2.5 rounded-xl border border-red-200 bg-red-50 p-3 text-xs text-red-800">
+              <div className="mt-3 flex items-start gap-2.5 rounded-xl border border-rose-200 bg-rose-50 p-3 text-xs text-rose-900">
                 <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
                 <div>
                   <span className="font-mono font-semibold">{localVerification.code}: </span>
@@ -1222,39 +1313,50 @@ export function PaydayStudio() {
               <div
                 className={`mt-3 rounded-xl border p-3 text-xs ${
                   execMessage.type === "err"
-                    ? "border-red-200 bg-red-50 text-red-800"
-                    : "border-emerald-200 bg-emerald-50 text-emerald-900"
+                    ? "border-rose-200 bg-rose-50 text-rose-900"
+                    : "border-teal-200 bg-teal-50 text-teal-900"
                 }`}
               >
                 {execMessage.text}
               </div>
             )}
 
-            <div className="mt-4 flex flex-wrap items-center justify-end gap-2.5">
-              <button
-                onClick={() => handleSignAndExecute(true)}
-                disabled={executing || !plan || !vault || (localVerification ? !localVerification.ok : false)}
-                className="inline-flex items-center gap-2 rounded-xl border border-[#E5E4DE] bg-[#F7F6F2] px-4 py-2.5 text-sm font-medium text-slate-900 transition hover:bg-stone-200/70 disabled:opacity-40"
-              >
-                <KeyRound className="h-4 w-4" />
-                Sign Locally (P-256) &amp; Mint Preview Receipt
-              </button>
+            <div className="mt-4 flex flex-wrap items-center justify-between gap-3 border-t border-[#E5E1D8] pt-4">
+              <span className="font-mono text-[11px] text-[#625B54]">
+                Signer: {vault?.fingerprint ?? "Initializing…"}
+              </span>
 
-              {connectedWallet && (
+              <div className="flex flex-wrap items-center gap-2.5">
                 <button
-                  onClick={() => handleSignAndExecute(false)}
+                  onClick={() => handleSignAndExecute(true)}
                   disabled={
                     executing ||
                     !plan ||
-                    plan.planStatus !== "READY_TO_SIGN" ||
+                    !vault ||
                     (localVerification ? !localVerification.ok : false)
                   }
-                  className="inline-flex items-center gap-2 rounded-xl bg-emerald-700 px-4 py-2.5 text-sm font-medium text-white shadow-xs transition hover:bg-emerald-800 disabled:opacity-40"
+                  className="inline-flex items-center gap-2 rounded-full bg-[#701735] px-5 py-2.5 text-sm font-medium text-white shadow-xs transition hover:bg-[#581028] disabled:opacity-40"
                 >
-                  <ShieldCheck className="h-4 w-4" />
-                  {executing ? "Signing & Executing Live…" : "Sign & Execute Live on Gateway"}
+                  <KeyRound className="h-4 w-4" />
+                  Sign Locally &amp; Mint Receipt
                 </button>
-              )}
+
+                {connectedWallet && (
+                  <button
+                    onClick={() => handleSignAndExecute(false)}
+                    disabled={
+                      executing ||
+                      !plan ||
+                      plan.planStatus !== "READY_TO_SIGN" ||
+                      (localVerification ? !localVerification.ok : false)
+                    }
+                    className="inline-flex items-center gap-2 rounded-full bg-teal-800 px-5 py-2.5 text-sm font-medium text-white shadow-xs transition hover:bg-teal-900 disabled:opacity-40"
+                  >
+                    <ShieldCheck className="h-4 w-4" />
+                    {executing ? "Executing Live…" : "Execute Live on Gateway"}
+                  </button>
+                )}
+              </div>
             </div>
           </div>
         </section>

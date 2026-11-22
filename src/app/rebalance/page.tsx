@@ -96,51 +96,56 @@ export default function RebalancePage() {
 
   return (
     <div className="space-y-6">
-      <section className="rounded-2xl border border-[#E5E4DE] bg-white p-6 shadow-xs">
-        <div className="flex flex-wrap items-start justify-between gap-4">
-          <div className="max-w-2xl">
-            <span className="inline-flex items-center gap-1.5 rounded-full border border-emerald-200 bg-emerald-50 px-2.5 py-0.5 text-xs font-medium text-emerald-800">
-              <Scale className="h-3 w-3" />
-              Drift Rebalancer · Live Gateway Quotes
-            </span>
-            <h1 className="mt-2 text-2xl font-semibold tracking-tight text-slate-900">
-              Keep your Global 401(k) on target — without weekend slippage.
-            </h1>
-            <p className="mt-1 text-sm text-stone-600">
-              When one equity rallies past its target weight, Allot trims overweight shares first so
-              USDC proceeds fund underweight buys, skips minor noise inside your drift band, and
-              auto-routes any wide-spread leg to a resting{" "}
-              <span className="font-medium text-slate-900">CeFi CLOB limit order</span>.
-            </p>
-          </div>
-          <button
-            onClick={() => compile()}
-            disabled={loading}
-            className="inline-flex items-center gap-1.5 rounded-xl border border-[#E5E4DE] bg-[#F7F6F2] px-3.5 py-2 text-xs font-medium text-slate-800 hover:bg-stone-200/60"
-          >
-            <RefreshCw className={`h-3.5 w-3.5 ${loading ? "animate-spin" : ""}`} />
-            Re-quote Live
-          </button>
-        </div>
-
-        <div className="mt-5 grid grid-cols-1 gap-3 md:grid-cols-2">
-          {PRESETS.map((p) => (
+      <section className="overflow-hidden rounded-3xl border border-[#E5E1D8] bg-white shadow-sm">
+        <div className="h-1.5 w-full bg-[#701735]" />
+        <div className="p-6">
+          <div className="flex flex-wrap items-start justify-between gap-4">
+            <div className="max-w-2xl">
+              <span className="inline-flex items-center gap-1.5 rounded-full border border-[#EAD2DA] bg-[#F9EFF2] px-3 py-0.5 text-xs font-medium text-[#701735]">
+                <Scale className="h-3 w-3" />
+                Drift Rebalancer · Live Gateway Quotes
+              </span>
+              <h1 className="font-serif-display mt-2.5 text-2xl font-semibold tracking-tight text-[#171412] sm:text-3xl">
+                Keep your Global 401(k) on target — without weekend slippage.
+              </h1>
+              <p className="mt-1.5 text-sm text-[#625B54]">
+                When one equity rallies past its target weight, Allot trims overweight shares first
+                so USDC proceeds fund underweight buys, skips minor noise inside your drift band,
+                and auto-routes any wide-spread leg to a resting{" "}
+                <span className="font-medium text-[#171412]">CeFi CLOB limit order</span>.
+              </p>
+            </div>
             <button
-              key={p.id}
-              onClick={() => selectPreset(p.id)}
-              className={`rounded-xl border p-3.5 text-left transition ${
-                presetId === p.id
-                  ? "border-slate-900 bg-[#F7F6F2] ring-1 ring-slate-900"
-                  : "border-[#E5E4DE] bg-white hover:border-stone-400"
-              }`}
+              onClick={() => compile()}
+              disabled={loading}
+              className="inline-flex items-center gap-1.5 rounded-full border border-[#E5E1D8] bg-[#FAF8F4] px-4 py-2 text-xs font-medium text-[#171412] hover:border-[#701735]/40"
             >
-              <div className="flex items-center justify-between">
-                <span className="text-sm font-semibold text-slate-900">{p.label}</span>
-                {presetId === p.id && <CheckCircle2 className="h-4 w-4 text-slate-900" />}
-              </div>
-              <p className="mt-1 text-xs text-stone-600">{p.subtitle}</p>
+              <RefreshCw className={`h-3.5 w-3.5 ${loading ? "animate-spin" : ""}`} />
+              Re-quote Live
             </button>
-          ))}
+          </div>
+
+          <div className="mt-5 grid grid-cols-1 gap-3 md:grid-cols-2">
+            {PRESETS.map((p) => (
+              <button
+                key={p.id}
+                onClick={() => selectPreset(p.id)}
+                className={`rounded-2xl border p-4 text-left transition ${
+                  presetId === p.id
+                    ? "border-[#701735] bg-[#FAF8F4] ring-1 ring-[#701735]"
+                    : "border-[#E5E1D8] bg-white hover:border-[#701735]/40"
+                }`}
+              >
+                <div className="flex items-center justify-between">
+                  <span className="font-serif-display text-base font-semibold text-[#171412]">
+                    {p.label}
+                  </span>
+                  {presetId === p.id && <CheckCircle2 className="h-4 w-4 text-[#701735]" />}
+                </div>
+                <p className="mt-1 text-xs text-[#625B54]">{p.subtitle}</p>
+              </button>
+            ))}
+          </div>
         </div>
       </section>
 

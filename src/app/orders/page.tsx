@@ -316,10 +316,10 @@ export default function OrdersAndWalletPage() {
     <div className="space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-semibold text-slate-900">
-            Portfolio Holdings, Wallet &amp; CLOB Orders
+          <h1 className="font-serif-display text-3xl font-semibold text-[#171412]">
+            Portfolio Holdings &amp; CLOB Orders
           </h1>
-          <p className="text-sm text-stone-600">
+          <p className="mt-1 text-sm text-[#625B54]">
             Live True Markets Gateway portfolio value, tokenized U.S. stock cost basis &amp; P&amp;L,
             resting CeFi limit orders, and instant Cash Floor USDC transfers.
           </p>
@@ -327,72 +327,129 @@ export default function OrdersAndWalletPage() {
         <button
           onClick={loadWallet}
           disabled={loading}
-          className="inline-flex items-center gap-1.5 rounded-xl border border-[#E5E4DE] bg-white px-3.5 py-2 text-xs font-medium text-slate-800 hover:bg-stone-50"
+          className="inline-flex items-center gap-1.5 rounded-full border border-[#E5E1D8] bg-white px-4 py-2 text-xs font-medium text-[#171412] transition hover:border-[#701735]/40"
         >
           <RefreshCw className={`h-3.5 w-3.5 ${loading ? "animate-spin" : ""}`} />
           Sync Gateway State
         </button>
       </div>
 
+      {!wallet && (
+        <div className="flex flex-wrap items-center justify-between gap-2 rounded-2xl border border-[#EAD2DA] bg-[#F9EFF2] px-4 py-3 text-xs text-[#701735]">
+          <span className="flex items-center gap-2 font-medium">
+            <Shield className="h-4 w-4 shrink-0" />
+            Viewing live mainnet Base showcase wallet (read-only · P-256 signer key stays offline).
+          </span>
+          <span className="font-mono text-[11px]">403 READ_ONLY_DEMO_WALLET enforced</span>
+        </div>
+      )}
+
       {/* Live Portfolio Summary Strip */}
       {data?.portfolio && (
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-          <div className="rounded-2xl border border-[#E5E4DE] bg-white p-4 shadow-xs">
-            <div className="text-[11px] font-medium uppercase tracking-wider text-stone-500">
-              Total Portfolio
+        <div className="space-y-3">
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+            <div className="rounded-2xl border border-[#E5E1D8] bg-white p-4 shadow-xs">
+              <div className="font-mono text-[10px] uppercase tracking-wider text-[#625B54]">
+                Total Portfolio
+              </div>
+              <div className="font-serif-display mt-1 text-2xl font-semibold text-[#171412] tabular-nums">
+                ${Number(data.portfolio.total_usd || 0).toFixed(2)}
+              </div>
+              {data.portfolio.change_24h_pct && (
+                <div
+                  className={`mt-0.5 font-mono text-xs ${
+                    Number(data.portfolio.change_24h_pct) >= 0 ? "text-teal-700" : "text-rose-700"
+                  }`}
+                >
+                  {Number(data.portfolio.change_24h_pct) >= 0 ? "+" : ""}
+                  {Number(data.portfolio.change_24h_pct).toFixed(2)}% (24h)
+                </div>
+              )}
             </div>
-            <div className="mt-1 font-mono text-xl font-semibold text-slate-900 tabular-nums">
-              ${Number(data.portfolio.total_usd || 0).toFixed(2)}
+            <div className="rounded-2xl border border-[#E5E1D8] bg-white p-4 shadow-xs">
+              <div className="font-mono text-[10px] uppercase tracking-wider text-[#625B54]">
+                Tokenized U.S. Stocks
+              </div>
+              <div className="font-serif-display mt-1 text-2xl font-semibold text-[#701735] tabular-nums">
+                $
+                {Math.max(
+                  0,
+                  Number(data.portfolio.total_usd || 0) - Number(data.portfolio.cash_usd || 0),
+                ).toFixed(2)}
+              </div>
+              <div className="mt-0.5 text-[11px] text-[#625B54]">Live Base holdings</div>
             </div>
-            {data.portfolio.change_24h_pct && (
+            <div className="rounded-2xl border border-[#E5E1D8] bg-white p-4 shadow-xs">
+              <div className="font-mono text-[10px] uppercase tracking-wider text-[#625B54]">
+                Protected Cash Floor
+              </div>
+              <div className="font-serif-display mt-1 text-2xl font-semibold text-teal-900 tabular-nums">
+                ${Number(data.portfolio.cash_usd || data.totalUsdcAvailable || 0).toFixed(2)}
+              </div>
+              <div className="mt-0.5 text-[11px] text-[#625B54]">Spendable USDC</div>
+            </div>
+            <div className="rounded-2xl border border-[#E5E1D8] bg-white p-4 shadow-xs">
+              <div className="font-mono text-[10px] uppercase tracking-wider text-[#625B54]">
+                Unrealized P&amp;L
+              </div>
               <div
-                className={`mt-0.5 font-mono text-xs ${
-                  Number(data.portfolio.change_24h_pct) >= 0 ? "text-emerald-700" : "text-red-700"
+                className={`font-serif-display mt-1 text-2xl font-semibold tabular-nums ${
+                  Number(data.portfolio.unrealized_pnl_usd || 0) >= 0
+                    ? "text-teal-800"
+                    : "text-[#625B54]"
                 }`}
               >
-                {Number(data.portfolio.change_24h_pct) >= 0 ? "+" : ""}
-                {Number(data.portfolio.change_24h_pct).toFixed(2)}% (24h)
+                {Number(data.portfolio.unrealized_pnl_usd || 0) >= 0 ? "+" : ""}$
+                {Number(data.portfolio.unrealized_pnl_usd || 0).toFixed(2)}
               </div>
-            )}
+              <div className="mt-0.5 text-[11px] text-[#625B54]">Live mark-to-market</div>
+            </div>
           </div>
-          <div className="rounded-2xl border border-[#E5E4DE] bg-white p-4 shadow-xs">
-            <div className="text-[11px] font-medium uppercase tracking-wider text-stone-500">
-              Tokenized U.S. Stocks
+
+          {/* Visual Portfolio Split Bar */}
+          {Number(data.portfolio.total_usd || 0) > 0 && data.portfolio.balances?.length ? (
+            <div className="rounded-2xl border border-[#E5E1D8] bg-white p-4 shadow-xs">
+              <div className="flex h-2.5 w-full overflow-hidden rounded-full bg-[#ECE8DF]">
+                {data.portfolio.balances.map((pb, idx) => {
+                  const pct =
+                    (Number(pb.value || 0) / Number(data.portfolio!.total_usd || 1)) * 100;
+                  const cls =
+                    pb.symbol === "USDC"
+                      ? "bg-teal-700"
+                      : idx % 2 === 0
+                        ? "bg-[#701735]"
+                        : "bg-[#171412]";
+                  return (
+                    <div
+                      key={pb.asset_id}
+                      style={{ width: `${Math.max(1, pct)}%` }}
+                      className={cls}
+                      title={`${pb.symbol}: ${pct.toFixed(1)}%`}
+                    />
+                  );
+                })}
+              </div>
+              <div className="mt-2 flex flex-wrap gap-4 text-xs text-[#625B54]">
+                {data.portfolio.balances.map((pb, idx) => {
+                  const pct =
+                    (Number(pb.value || 0) / Number(data.portfolio!.total_usd || 1)) * 100;
+                  const dot =
+                    pb.symbol === "USDC"
+                      ? "bg-teal-700"
+                      : idx % 2 === 0
+                        ? "bg-[#701735]"
+                        : "bg-[#171412]";
+                  return (
+                    <span key={pb.asset_id} className="inline-flex items-center gap-1.5">
+                      <span className={`h-2 w-2 rounded-full ${dot}`} />
+                      <span className="font-medium text-[#171412]">{pb.name}</span>
+                      <span className="font-mono text-[11px]">{pct.toFixed(1)}%</span>
+                    </span>
+                  );
+                })}
+              </div>
             </div>
-            <div className="mt-1 font-mono text-xl font-semibold text-emerald-800 tabular-nums">
-              $
-              {Math.max(
-                0,
-                Number(data.portfolio.total_usd || 0) - Number(data.portfolio.cash_usd || 0),
-              ).toFixed(2)}
-            </div>
-            <div className="mt-0.5 text-[11px] text-stone-500">Live Base holdings</div>
-          </div>
-          <div className="rounded-2xl border border-[#E5E4DE] bg-white p-4 shadow-xs">
-            <div className="text-[11px] font-medium uppercase tracking-wider text-stone-500">
-              Protected Cash Floor
-            </div>
-            <div className="mt-1 font-mono text-xl font-semibold text-indigo-900 tabular-nums">
-              ${Number(data.portfolio.cash_usd || data.totalUsdcAvailable || 0).toFixed(2)}
-            </div>
-            <div className="mt-0.5 text-[11px] text-stone-500">Spendable USDC</div>
-          </div>
-          <div className="rounded-2xl border border-[#E5E4DE] bg-white p-4 shadow-xs">
-            <div className="text-[11px] font-medium uppercase tracking-wider text-stone-500">
-              Unrealized P&amp;L
-            </div>
-            <div
-              className={`mt-1 font-mono text-xl font-semibold tabular-nums ${
-                Number(data.portfolio.unrealized_pnl_usd || 0) >= 0
-                  ? "text-emerald-800"
-                  : "text-stone-700"
-              }`}
-            >
-              {Number(data.portfolio.unrealized_pnl_usd || 0) >= 0 ? "+" : ""}$
-              {Number(data.portfolio.unrealized_pnl_usd || 0).toFixed(2)}
-            </div>
-            <div className="mt-0.5 text-[11px] text-stone-500">Live mark-to-market</div>
-          </div>
+          ) : null}
         </div>
       )}
 
