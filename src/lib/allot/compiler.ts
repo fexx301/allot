@@ -404,7 +404,7 @@ export function compilePaydayPlan(input: CompilePaydayInput): CompiledPaydayPlan
         effectiveCents,
         action: "STAGE_CEFI_LIMIT",
         reasonCode: "PRICE_DRIFT_GUARDED",
-        reasonMessage: `Refused DeFi market fill at +${driftBps.toFixed(1)} bps (cap: ${rule.maxDriftBps} bps). Auto-switched via economic_asset_id to CeFi CLOB limit @ $${limitPriceStr} (est. $${estSavingsUsd.toFixed(2)} saved).`,
+        reasonMessage: `Refused DeFi market fill at +${driftBps.toFixed(1)} bps (cap: ${rule.maxDriftBps} bps). Auto-switched to paired CeFi CLOB limit @ $${limitPriceStr} (est. $${estSavingsUsd.toFixed(2)} saved).`,
         targetVenue: "cefi",
         targetAssetId: snap.cefiAssetId,
         targetChain: null,
