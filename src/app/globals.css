@@ -1,14 +1,18 @@
 @import "tailwindcss";
 
 :root {
-  --bg-canvas: #f7f6f2;
+  --bg-canvas: #f6f4ef;
   --bg-surface: #ffffff;
-  --border-subtle: #e5e4de;
-  --ink-primary: #0f172a;
-  --ink-muted: #57534e;
-  --accent-emerald: #047857;
+  --bg-paper: #faf8f4;
+  --border-subtle: #e5e1d8;
+  --ink-primary: #171412;
+  --ink-muted: #625b54;
+  --brand: #701735;
+  --brand-hover: #581028;
+  --brand-soft: #f9eff2;
+  --brand-border: #ead2da;
+  --accent-emerald: #0f766e;
   --accent-amber: #b45309;
-  --accent-indigo: #3730a3;
 }
 
 body {
@@ -18,6 +22,39 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 
+.font-serif-display {
+  font-family: var(--font-fraunces), Georgia, serif;
+  font-variation-settings: "SOFT" 65, "WONK" 0;
+}
+
 .tabular-nums {
   font-variant-numeric: tabular-nums;
+}
+
+/* Signature tear-off pay-stub serrated edge */
+.stub-perforation-v {
+  background-image: radial-gradient(circle at 0 8px, var(--bg-canvas) 5px, transparent 5.5px);
+  background-size: 10px 16px;
+  background-repeat: repeat-y;
+}
+
+.stub-perforation-h {
+  background-image: radial-gradient(circle at 8px 0, var(--bg-canvas) 4.5px, transparent 5px);
+  background-size: 16px 10px;
+  background-repeat: repeat-x;
+}
+
+@keyframes shimmer {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+.skeleton {
+  background: linear-gradient(90deg, #ede9e0 25%, #f6f4ef 50%, #ede9e0 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.4s ease-in-out infinite;
 }

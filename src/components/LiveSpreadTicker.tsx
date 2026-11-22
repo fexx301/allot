@@ -3,7 +3,17 @@
 import { useEffect, useState } from "react";
 import { Radio } from "lucide-react";
 
-const WATCH_SYMBOLS = ["AAPLC", "NVDAC", "SPCXC", "TSLAC", "MSFTC", "AMZNC", "GOOGLC", "METAC", "PLTRC"];
+const WATCH_SYMBOLS = [
+  "AAPLC",
+  "NVDAC",
+  "SPCXC",
+  "TSLAC",
+  "MSFTC",
+  "AMZNC",
+  "GOOGLC",
+  "METAC",
+  "PLTRC",
+];
 
 interface TickerEntry {
   symbol: string;
@@ -21,7 +31,6 @@ export function LiveSpreadTicker() {
     let closed = false;
     let ws: WebSocket | null = null;
 
-    // Seed immediately from our /api/catalog so ticker is populated in <500ms even before first WS tick
     fetch("/api/catalog")
       .then((r) => r.json())
       .then((d) => {
@@ -68,7 +77,9 @@ export function LiveSpreadTicker() {
                 symbol: sym,
                 price: Number(msg.data.price),
                 change24h:
-                  msg.data.change_24h !== undefined ? Number(msg.data.change_24h) : prev[sym]?.change24h,
+                  msg.data.change_24h !== undefined
+                    ? Number(msg.data.change_24h)
+                    : prev[sym]?.change24h,
                 updatedAt: msg.data.timestamp,
               },
             }));
@@ -109,41 +120,46 @@ export function LiveSpreadTicker() {
   const items = WATCH_SYMBOLS.map((s) => ticks[s]).filter(Boolean);
 
   return (
-    <div className="border-b border-[#E5E4DE] bg-white/80">
-      <div className="mx-auto flex max-w-7xl items-center gap-3 overflow-x-auto px-4 py-2 text-xs sm:px-6 lg:px-8">
-        <div className="flex shrink-0 items-center gap-1.5 border-r border-[#E5E4DE] pr-3 font-mono text-[10px] font-semibold uppercase tracking-wider text-stone-500">
+    <div className="border-b border-[#E5E1D8] bg-[#FAF8F4]">
+      <div className="mx-auto flex max-w-7xl items-center gap-3.5 overflow-x-auto px-4 py-2 text-xs sm:px-6 lg:px-8">
+        <div className="flex shrink-0 items-center gap-1.5 border-r border-[#E5E1D8] pr-3.5 font-mono text-[10px] font-semibold uppercase tracking-widest text-[#701735]">
           <Radio
             className={`h-3 w-3 ${
               wsState === "live"
-                ? "text-emerald-600 animate-pulse"
+                ? "text-[#701735] animate-pulse"
                 : wsState === "connecting"
                   ? "text-amber-600"
                   : "text-stone-400"
             }`}
           />
           {wsState === "live"
-            ? "Live Market WS"
+            ? "24/7 Live Feed"
             : wsState === "connecting"
-              ? "Connecting WS…"
-              : "Live Market REST"}
+              ? "Syncing Feed…"
+              : "Live Market"}
         </div>
 
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-5">
           {items.length === 0 ? (
-            <span className="font-mono text-[11px] text-stone-400">
-              Streaming tokenized U.S. stock feeds from True Markets…
-            </span>
+            <div className="flex items-center gap-3">
+              {[1, 2, 3, 4, 5].map((n) => (
+                <div key={n} className="skeleton h-4 w-24 rounded-md" />
+              ))}
+            </div>
           ) : (
             items.map((t) => (
-              <div key={t.symbol} className="flex shrink-0 items-center gap-1.5 font-mono tabular-nums">
-                <span className="font-semibold text-slate-900">{t.symbol}</span>
-                <span className="text-stone-700">${t.price.toFixed(2)}</span>
+              <div
+                key={t.symbol}
+                className="flex shrink-0 items-center gap-1.5 font-mono text-[11px] tabular-nums"
+              >
+                <span className="font-semibold text-[#171412]">{t.symbol}</span>
+                <span className="text-[#625B54]">${t.price.toFixed(2)}</span>
                 {t.change24h !== undefined && Number.isFinite(t.change24h) && (
                   <span
-                    className={`rounded px-1 py-0.5 text-[10px] font-medium ${
+                    className={`rounded-full px-1.5 py-0.5 text-[10px] font-medium ${
                       t.change24h >= 0
-                        ? "bg-emerald-50 text-emerald-700"
-                        : "bg-red-50 text-red-700"
+                        ? "bg-teal-50 text-teal-800"
+                        : "bg-rose-50 text-rose-800"
                     }`}
                   >
                     {t.change24h >= 0 ? "+" : ""}

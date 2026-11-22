@@ -90,12 +90,12 @@ export function WalletModal({
       <div className="w-full max-w-lg rounded-2xl border border-[#E5E4DE] bg-white p-6 shadow-xl">
         <div className="flex items-start justify-between">
           <div>
-            <div className="inline-flex items-center gap-1.5 rounded-full bg-emerald-50 px-2.5 py-0.5 text-xs font-medium text-emerald-800">
+            <div className="inline-flex items-center gap-1.5 rounded-full border border-[#EAD2DA] bg-[#F9EFF2] px-2.5 py-0.5 text-xs font-medium text-[#701735]">
               <KeyRound className="h-3 w-3" />
               Non-Custodial Turnkey TEE + P-256
             </div>
-            <h2 className="mt-2 text-lg font-semibold text-slate-900">
-              {connectedWallet ? "Your True Markets Gateway Wallet" : "Provision Non-Custodial Wallet"}
+            <h2 className="font-serif-display mt-2 text-xl font-semibold text-[#171412]">
+              {connectedWallet ? "Your True Markets Gateway Wallet" : "Create Non-Custodial Wallet"}
             </h2>
             <p className="mt-1 text-xs text-stone-600">
               Your ECDSA P-256 private key stays strictly in this browser. Only the compressed public
@@ -230,7 +230,7 @@ export function WalletModal({
               <button
                 type="submit"
                 disabled={loading || !vault}
-                className="inline-flex items-center gap-2 rounded-xl bg-slate-900 px-4 py-2 text-sm font-medium text-white transition hover:bg-emerald-800 disabled:opacity-50"
+                className="inline-flex items-center gap-2 rounded-full bg-[#701735] px-5 py-2.5 text-sm font-medium text-white transition hover:bg-[#581028] disabled:opacity-50"
               >
                 {loading && <Loader2 className="h-4 w-4 animate-spin" />}
                 Create Gateway Wallet
