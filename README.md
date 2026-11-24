@@ -6,9 +6,17 @@
 
 **Live Demo (EU `fra1`):** [https://allot-ashen.vercel.app](https://allot-ashen.vercel.app) · **Live Base Mainnet Receipt:** [`/receipt/rcpt_live_base_20261122`](https://allot-ashen.vercel.app/receipt/rcpt_live_base_20261122) · **Live Gateway Health:** [`/api/health`](https://allot-ashen.vercel.app/api/health) · **Demo Video:** 1:38 walkthrough attached on the DevSpot submission
 
-> **Keep your rent safe. Put the rest into U.S. stocks.** Set two rules once (how much cash to always keep for rent, and the maximum price above market you will accept), and every USDC paycheck automatically splits into tokenized U.S. stocks on True Markets Gateway, signed only in your browser.
+> **Keep your rent safe. Put the rest into U.S. stocks.**
 
-Allot brings three protections together in one app: (1) auto-investing part of each USDC payment while hard-locking your rent floor, (2) automatically switching wide spreads to price-capped CeFi CLOB limit orders, and (3) refusing to sign in your browser if our server tampers with your rules or the price jumps right before signing. **Allot is the only one that does all three non-custodially, with a live Base mainnet receipt.**
+Allot is a non-custodial "Global 401(k)" for people paid in USDC. Set two rules once: how much cash to always keep for rent, and the most you'll pay above market. Each paycheck then splits into tokenized U.S. stocks on True Markets Gateway the moment you approve it with one signature in your browser. Your signing key never leaves your device.
+
+**It's live:** a real $5.98 USDC paycheck on Base mainnet. $2.09 rent floor kept, $3.89 bought into Apple and NVIDIA, $0.00778 total fees, $0 gas ([receipt](https://allot-ashen.vercel.app/receipt/rcpt_live_base_20261122)).
+
+### Three protections in one app
+
+1. **Your rent floor is a hard lock.** If a paycheck doesn't clear your floor, nothing is bought ($850 invoice → $0 invested).
+2. **It never overpays.** When a live quote is above your limit, Allot switches that stock from a DeFi market buy to a price-capped CeFi CLOB limit order (paired via `economic_asset_id`).
+3. **It doesn't trust its own server.** Your browser re-checks every rule and the final price before signing. A tampered plan or a last-second price jump means nothing gets signed.
 
 ---
 
@@ -28,8 +36,9 @@ Executed live on True Markets Gateway (`user_id: 98f6006a-b96a-4b77-a9e8-69c1c85
 
 ---
 
-## 60-Second Judge Path
+## Judge Path (2 Minutes, No Login)
 
+0. **Watch the 1:38 demo video** attached to the DevSpot submission.
 1. **Open Payday Studio (`https://allot-ashen.vercel.app`)**: no login required. Loads the live True Markets tokenized stock catalog (`GET /v1/gateway/assets?asset_class=stock`, including 14 dual-venue CLOB flagships: `AAPLC`, `NVDAC`, `MSFTC`, `AMZNC`, `GOOGLC`, `METAC`, `TSLAC`, `PLTRC`, and pre-IPO **`SPCXC` SpaceX**), the 24/7 live tape, live Market Data prices, and live `POST /v1/gateway/quotes`. Plain-language UI by default (`0.25%`, *Buying now*, *Limit order*); click **Technical details** on any plan card to inspect raw Gateway payloads, venues, quantities, and `economic_asset_id`s.
 2. **Test the 3 live paydays (top cards):**
    - **$3,500 Remote Salary** (*Max price above market* = `0.25%`): tight quotes show **Buying now** (`DEFI MARKET`). Any stock quoting over `0.25%` above market switches to **Limit order <= $...** (`PRICE_DRIFT_GUARDED` -> paired `cefi` CLOB limit order via `economic_asset_id`, tick-quantized to True Markets' 9-bucket schedule).
@@ -113,6 +122,12 @@ npm run dev       # http://localhost:3000
 - **Closes the preview-to-signing window:** `verifyPreparedOrderQuote()` re-checks the fresh quote from `POST /v1/gateway/orders` against your cap immediately before browser P-256 signing, aborting with zero signature sent if the price jumped.
 - **Tamper-resistant local signing:** browser independently verifies the canonical SHA-256 `plan_hash`, cash floor, price limit, and reference freshness against local rules before stamping.
 - **Serverless resilience & showcase protection:** receipts and paylinks encode stateless compressed `?d=` share tokens so links survive cold starts, realized receipts report actual executed VWAP spread (`actual fill`), and the funded mainnet demo wallet is write-locked (`403 READ_ONLY_DEMO_WALLET`) while newly created user wallets execute normally.
+
+---
+
+## Built During the Challenge
+
+Allot was built from scratch for True Markets: Call for Builders (first commit Nov 22, 2026). All application code in this repository is new work. Pre-existing components are third-party open-source dependencies only (Next.js, React, Tailwind CSS, Turnkey's `@turnkey/api-key-stamper` and `@turnkey/crypto` for P-256 request stamping, Zod, Vitest and the rest of `package.json`).
 
 ---
 
